@@ -1,0 +1,25 @@
+{
+  "dependencies": {
+    "@nestjs/mapped-types": "*"
+  },
+  "name": "dvara",
+  "version": "0.0.1",
+  "description": "**Dvara** est une plateforme inspirée de Homarr, permettant de centraliser toutes vos applications auto-hébergées dans une interface moderne, responsive et maintenable.\r Développée avec Angular 20, NestJS et SQLite, elle vise à offrir un dashboard modulable et sécurisé.",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "start:frontend": "npm --workspace apps/frontend run start",
+    "start:backend": "npm --workspace apps/backend run start:dev",
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
