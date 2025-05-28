@@ -83,6 +83,22 @@ export class UsersService {
   }
 
   /**
+   * Finds a user by email.
+   * @param email - User email
+   */
+  async findByEmail(email: string) {
+    try {
+      return await this.prisma.user.findUnique({ where: { email } });
+    } catch (error) {
+      const err = error as { message?: string };
+      throw new BadRequestException(
+        err.message ||
+          "Erreur lors de la récupération de l'utilisateur par email",
+      );
+    }
+  }
+
+  /**
    * Updates user data (except password), with unique email validation.
    * @param id - User id
    * @param updateUserDto - Data for update
