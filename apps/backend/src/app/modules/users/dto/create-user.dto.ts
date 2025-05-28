@@ -9,7 +9,7 @@ import {
   IsOptional,
   IsEnum,
 } from 'class-validator';
-import { Role } from '../../../common/enums/role.enums';
+import { Group } from '../../../common/enums/group.enums';
 import { DayOfWeek } from '../../../common/enums/dayofweek.enums';
 
 export class CreateUserDto {
@@ -39,8 +39,8 @@ export class CreateUserDto {
   firstDayOfWeek?: DayOfWeek;
 
   @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
+  @IsEnum(Group)
+  group?: Group;
 
   @IsOptional()
   homeDashboard?: number;

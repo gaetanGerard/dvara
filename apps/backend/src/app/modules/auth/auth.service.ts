@@ -5,7 +5,7 @@ import { PrismaService } from '../../common/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RefreshPayload } from './auth.types';
 import { DayOfWeek } from '../../common/enums/dayofweek.enums';
-import { Role } from '../../common/enums/role.enums';
+import { Group } from '../../common/enums/group.enums';
 
 @Injectable()
 export class AuthService {
@@ -30,18 +30,18 @@ export class AuthService {
       ...rest,
       image: rest.image ?? undefined,
       firstDayOfWeek: rest.firstDayOfWeek as DayOfWeek,
-      role: rest.role as Role,
+      group: rest.group as Group,
       homeDashboard: rest.homeDashboard ?? undefined,
     };
     // Generate JWT (durée configurable via .env)
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, group: user.group };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
       secret: process.env.JWT_SECRET,
     });
     // Generate refresh token (durée configurable via .env)
     const refresh_token = this.jwtService.sign(
-      { sub: user.id, email: user.email, role: user.role },
+      { sub: user.id, email: user.email, group: user.group },
       {
         expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
         secret: process.env.JWT_SECRET,
@@ -89,7 +89,7 @@ export class AuthService {
     // Generate new access token
     return {
       access_token: this.jwtService.sign(
-        { sub: payload.sub, email: payload.email, role: payload.role },
+        { sub: payload.sub, email: payload.email, group: payload.group },
         {
           expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
           secret: process.env.JWT_SECRET,

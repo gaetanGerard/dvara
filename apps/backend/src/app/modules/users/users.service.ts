@@ -32,12 +32,17 @@ export class UsersService {
       if (existing)
         throw new BadRequestException('Cet email est déjà utilisé.');
 
+      const userCount = await this.prisma.user.count();
+      const group =
+        userCount === 0 ? 'SUPER_ADMIN' : (createUserDto.group ?? 'EVERYONE');
+
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
       const user = await this.prisma.user.create({
         data: {
           ...createUserDto,
           password: hashedPassword,
+          group,
         },
       });
 
@@ -117,7 +122,10 @@ export class UsersService {
 
       const user = await this.prisma.user.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          group: updateUserDto.group,
+        },
       });
       return removePassword(user);
     } catch (error) {

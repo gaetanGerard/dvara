@@ -1,4 +1,4 @@
-import { Role } from '../../../common/enums/role.enums';
+import { Group } from '../../../common/enums/group.enums';
 import { DayOfWeek } from '../../../common/enums/dayofweek.enums';
 
 // Represents a user entity as returned by the API (without password field).
@@ -9,7 +9,7 @@ export class User {
   image?: string;
   language: string;
   firstDayOfWeek: DayOfWeek;
-  role: Role;
+  group: Group;
   createdAt: Date;
   updatedAt: Date;
   homeDashboard?: number;

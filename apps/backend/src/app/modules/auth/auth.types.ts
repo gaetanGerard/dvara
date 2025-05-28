@@ -4,7 +4,7 @@
 export interface JwtPayload {
   sub: number;
   email: string;
-  role: string;
+  group: string;
 }
 
 /**
@@ -13,7 +13,7 @@ export interface JwtPayload {
 export interface JwtUser {
   sub: number;
   email: string;
-  role: string;
+  group: string;
 }
 
 /**
@@ -23,7 +23,7 @@ export interface JwtUser {
 export interface RefreshPayload {
   sub: number;
   email?: string;
-  role?: string;
+  group?: string;
   iat?: number;
   exp?: number;
 }

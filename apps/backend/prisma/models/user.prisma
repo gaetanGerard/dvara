@@ -6,17 +6,15 @@ model User {
   image          String?
   language       String    @default("en")
   firstDayOfWeek DayOfWeek @default(MONDAY)
-  role           Role      @default(USER)
+  group          Group     @default(EVERYONE)
   homeDashboard  Int?
   refreshToken   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
 
-enum Role {
-  APP_ADMIN
-  ADMIN
-  USER
+enum Group {
+  SUPER_ADMIN
   EVERYONE
 }
 
