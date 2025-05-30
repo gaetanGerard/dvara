@@ -1,0 +1,12 @@
+model GroupPermission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  groups      Group[]  @relation("GroupPermissions")
+  dashPermId      Int?
+  dashPerm        DashPerm?      @relation(fields: [dashPermId], references: [id])
+  appsPermId      Int?
+  appsPerm        AppsPerm?      @relation(fields: [appsPermId], references: [id])
+  mediaPermId     Int?
+  mediaPerm       MediaPerm?      @relation(fields: [mediaPermId], references: [id])
+}

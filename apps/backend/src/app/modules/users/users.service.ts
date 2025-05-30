@@ -32,17 +32,69 @@ export class UsersService {
       if (existing)
         throw new BadRequestException('Cet email est déjà utilisé.');
 
-      const userCount = await this.prisma.user.count();
-      const group =
-        userCount === 0 ? 'SUPER_ADMIN' : (createUserDto.group ?? 'EVERYONE');
+      const existingPseudo = await this.prisma.user.findUnique({
+        where: { pseudo: createUserDto.pseudo },
+      });
+      if (existingPseudo)
+        throw new BadRequestException('Ce pseudo est déjà utilisé.');
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
+      // Vérifier s'il existe déjà un utilisateur
+      const userCount = await this.prisma.user.count();
+      // Utiliser le typage explicite pour éviter l'erreur TypeScript
+      let groupConnect: { id: number }[] = [];
+      let adminGroupConnect: { id: number }[] = [];
+      if (userCount === 0) {
+        // Premier utilisateur : SUPER_ADMIN
+        const superAdminGroup = await this.prisma.group.findUnique({
+          where: { name: 'SUPER_ADMIN' },
+        });
+        if (superAdminGroup) {
+          groupConnect = [{ id: superAdminGroup.id }];
+          adminGroupConnect = [{ id: superAdminGroup.id }];
+        }
+      } else {
+        // Utilisateur classique : EVERYONE
+        const everyoneGroup = await this.prisma.group.findUnique({
+          where: { name: 'EVERYONE' },
+        });
+        if (everyoneGroup) {
+          groupConnect = [{ id: everyoneGroup.id }];
+        }
+      }
+      // Ajout des groupes supplémentaires si fournis
+      if (createUserDto.groupIds) {
+        groupConnect = [
+          ...groupConnect,
+          ...createUserDto.groupIds.map((id) => ({ id })),
+        ];
+      }
+      if (createUserDto.adminGroupIds) {
+        adminGroupConnect = [
+          ...adminGroupConnect,
+          ...createUserDto.adminGroupIds.map((id) => ({ id })),
+        ];
+      }
+
       const user = await this.prisma.user.create({
         data: {
-          ...createUserDto,
+          name: createUserDto.name,
+          pseudo: createUserDto.pseudo,
+          email: createUserDto.email,
           password: hashedPassword,
-          group,
+          image: createUserDto.image,
+          languageId: createUserDto.languageId,
+          dayOfWeekId: createUserDto.dayOfWeekId,
+          homeDashboard: createUserDto.homeDashboard,
+          groups: { connect: groupConnect },
+          adminGroups: { connect: adminGroupConnect },
+        },
+        include: {
+          groups: true,
+          adminGroups: true,
+          language: true,
+          dayOfWeek: true,
         },
       });
 
@@ -60,7 +112,14 @@ export class UsersService {
    */
   async findAll() {
     try {
-      const users = await this.prisma.user.findMany();
+      const users = await this.prisma.user.findMany({
+        include: {
+          groups: true,
+          adminGroups: true,
+          language: true,
+          dayOfWeek: true,
+        },
+      });
       return users.map(removePassword);
     } catch (error) {
       const err = error as { message?: string };
@@ -76,7 +135,15 @@ export class UsersService {
    */
   async findOne(id: number) {
     try {
-      const user = await this.prisma.user.findUnique({ where: { id } });
+      const user = await this.prisma.user.findUnique({
+        where: { id },
+        include: {
+          groups: true,
+          adminGroups: true,
+          language: true,
+          dayOfWeek: true,
+        },
+      });
       if (!user) throw new NotFoundException('Utilisateur non trouvé');
       return removePassword(user);
     } catch (error) {
@@ -117,14 +184,36 @@ export class UsersService {
         if (existing && existing.id !== id)
           throw new BadRequestException('Cet email est déjà utilisé.');
       }
+      if (updateUserDto.pseudo) {
+        const existingPseudo = await this.prisma.user.findUnique({
+          where: { pseudo: updateUserDto.pseudo },
+        });
+        if (existingPseudo && existingPseudo.id !== id)
+          throw new BadRequestException('Ce pseudo est déjà utilisé.');
+      }
+      const { password, groupIds, adminGroupIds, ...data } = updateUserDto;
 
-      const { password, ...data } = updateUserDto;
+      // Nettoyage des undefined dans data
+      const cleanedData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined),
+      );
 
       const user = await this.prisma.user.update({
         where: { id },
         data: {
-          ...data,
-          group: updateUserDto.group,
+          ...cleanedData,
+          groups: groupIds
+            ? { set: groupIds.map((id) => ({ id })) }
+            : undefined,
+          adminGroups: adminGroupIds
+            ? { set: adminGroupIds.map((id) => ({ id })) }
+            : undefined,
+        },
+        include: {
+          groups: true,
+          adminGroups: true,
+          language: true,
+          dayOfWeek: true,
         },
       });
       return removePassword(user);

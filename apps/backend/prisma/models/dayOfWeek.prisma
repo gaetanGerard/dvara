@@ -1,0 +1,11 @@
+enum DayOfWeekName {
+  MONDAY
+  SATURDAY
+  SUNDAY
+}
+
+model DayOfWeek {
+  id    Int    @id @default(autoincrement())
+  name  DayOfWeekName @default(MONDAY) @unique
+  users User[]
+}

@@ -4,7 +4,8 @@
 export interface JwtPayload {
   sub: number;
   email: string;
-  group: string;
+  groupIds: number[];
+  adminGroupIds: number[];
 }
 
 /**
@@ -13,7 +14,8 @@ export interface JwtPayload {
 export interface JwtUser {
   sub: number;
   email: string;
-  group: string;
+  groupIds: number[];
+  adminGroupIds: number[];
 }
 
 /**
@@ -23,7 +25,8 @@ export interface JwtUser {
 export interface RefreshPayload {
   sub: number;
   email?: string;
-  group?: string;
+  groupIds?: number[];
+  adminGroupIds?: number[];
   iat?: number;
   exp?: number;
 }

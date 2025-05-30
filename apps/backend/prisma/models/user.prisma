@@ -1,25 +1,18 @@
 model User {
   id             Int       @id @default(autoincrement())
   name           String
+  pseudo         String    @unique
   email          String    @unique
   password       String
   image          String?
-  language       String    @default("en")
-  firstDayOfWeek DayOfWeek @default(MONDAY)
-  group          Group     @default(EVERYONE)
+  languageId     Int?
+  language       Language? @relation(fields: [languageId], references: [id])
+  dayOfWeekId    Int?
+  dayOfWeek      DayOfWeek? @relation(fields: [dayOfWeekId], references: [id])
+  groups         Group[]   @relation("UserGroups")
+  adminGroups    Group[]   @relation("GroupAdmins")
   homeDashboard  Int?
   refreshToken   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-}
-
-enum Group {
-  SUPER_ADMIN
-  EVERYONE
-}
-
-enum DayOfWeek {
-  MONDAY
-  SATURDAY
-  SUNDAY
 }

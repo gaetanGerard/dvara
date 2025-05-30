@@ -1,0 +1,9 @@
+model Group {
+  id           Int              @id @default(autoincrement())
+  name         String           @unique
+  system       Boolean          @default(false)
+  admins       User[]           @relation("GroupAdmins")
+  permissions  GroupPermission[] @relation("GroupPermissions")
+  settings     GroupSetting?
+  users        User[]           @relation("UserGroups")
+}

@@ -1,0 +1,6 @@
+model GroupSetting {
+  id            Int    @id @default(autoincrement())
+  group         Group  @relation(fields: [groupId], references: [id])
+  groupId       Int    @unique
+  homeDashboard Int?
+}

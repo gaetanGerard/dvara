@@ -4,8 +4,6 @@ import { UsersService } from '../users/users.service';
 import { PrismaService } from '../../common/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RefreshPayload } from './auth.types';
-import { DayOfWeek } from '../../common/enums/dayofweek.enums';
-import { Group } from '../../common/enums/group.enums';
 
 @Injectable()
 export class AuthService {
@@ -26,22 +24,35 @@ export class AuthService {
     // Remove password before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...rest } = user;
+    // On récupère les groupes et adminGroups via un findOne complet
+    const userFull = await this.usersService.findOne(user.id);
+    const groupIds = Array.isArray(userFull.groups)
+      ? userFull.groups.map((g: { id: number }) => g.id)
+      : [];
+    const adminGroupIds = Array.isArray(userFull.adminGroups)
+      ? userFull.adminGroups.map((g: { id: number }) => g.id)
+      : [];
     const userForResponse = {
-      ...rest,
-      image: rest.image ?? undefined,
-      firstDayOfWeek: rest.firstDayOfWeek as DayOfWeek,
-      group: rest.group as Group,
-      homeDashboard: rest.homeDashboard ?? undefined,
+      ...userFull,
+      image: userFull.image ?? undefined,
+      homeDashboard: userFull.homeDashboard ?? undefined,
+      languageId: userFull.languageId ?? undefined,
+      dayOfWeekId: userFull.dayOfWeekId ?? undefined,
     };
     // Generate JWT (durée configurable via .env)
-    const payload = { sub: user.id, email: user.email, group: user.group };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      groupIds,
+      adminGroupIds,
+    };
     const access_token = this.jwtService.sign(payload, {
       expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
       secret: process.env.JWT_SECRET,
     });
     // Generate refresh token (durée configurable via .env)
     const refresh_token = this.jwtService.sign(
-      { sub: user.id, email: user.email, group: user.group },
+      { sub: user.id, email: user.email, groupIds, adminGroupIds },
       {
         expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
         secret: process.env.JWT_SECRET,
@@ -71,6 +82,10 @@ export class AuthService {
     // Check refresh token in DB
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
+      include: {
+        groups: true,
+        adminGroups: true,
+      },
     });
     if (!user || !user.refreshToken) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -79,17 +94,21 @@ export class AuthService {
       throw new UnauthorizedException('Stored refresh token is not a string');
     }
     // Compare hashed refresh token
-    const isValid = await bcrypt.compare(
-      refresh_token,
-      user.refreshToken as string,
-    );
+    const isValid = await bcrypt.compare(refresh_token, user.refreshToken);
     if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+    // Récupérer les ids de groupes et adminGroups
+    const groupIds = Array.isArray(user.groups)
+      ? user.groups.map((g: { id: number }) => g.id)
+      : [];
+    const adminGroupIds = Array.isArray(user.adminGroups)
+      ? user.adminGroups.map((g: { id: number }) => g.id)
+      : [];
     // Generate new access token
     return {
       access_token: this.jwtService.sign(
-        { sub: payload.sub, email: payload.email, group: payload.group },
+        { sub: user.id, email: user.email, groupIds, adminGroupIds },
         {
           expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
           secret: process.env.JWT_SECRET,

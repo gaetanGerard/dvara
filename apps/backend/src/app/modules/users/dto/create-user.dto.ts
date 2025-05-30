@@ -1,21 +1,26 @@
 /**
  * Data Transfer Object for creating a user.
- * Validates required fields and enforces password policy.
  */
 import {
   IsEmail,
   IsString,
   MinLength,
   IsOptional,
-  IsEnum,
+  IsInt,
+  IsArray,
+  ArrayUnique,
 } from 'class-validator';
-import { Group } from '../../../common/enums/group.enums';
+import { Language } from '../../../common/enums/language.enums';
 import { DayOfWeek } from '../../../common/enums/dayofweek.enums';
 
 export class CreateUserDto {
   @IsString()
   @MinLength(2)
   name: string;
+
+  @IsString()
+  @MinLength(2)
+  pseudo: string;
 
   @IsEmail()
   email: string;
@@ -31,17 +36,31 @@ export class CreateUserDto {
   image?: string;
 
   @IsOptional()
-  @IsString()
-  language?: string;
+  @IsInt()
+  languageId?: number;
 
   @IsOptional()
-  @IsEnum(DayOfWeek)
-  firstDayOfWeek?: DayOfWeek;
+  @IsInt()
+  dayOfWeekId?: number;
 
   @IsOptional()
-  @IsEnum(Group)
-  group?: Group;
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  groupIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  adminGroupIds?: number[];
 
   @IsOptional()
   homeDashboard?: number;
+
+  @IsOptional()
+  language?: Language;
+
+  @IsOptional()
+  dayOfWeek?: DayOfWeek;
 }
