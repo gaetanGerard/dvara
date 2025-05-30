@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Patch,
+  Param,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -17,10 +25,21 @@ export class AuthController {
    */
   @Post('login')
   async login(@Body() createAuthDto: CreateAuthDto): Promise<AuthResponseDto> {
-    return this.authService.validateUser(
+    const result = await this.authService.validateUser(
       createAuthDto.email,
       createAuthDto.password,
     );
+    // Correction stricte : transformer null en undefined pour les champs number et relations
+    if (result.user) {
+      const user = result.user as any;
+      if (user.languageId === null) user.languageId = undefined;
+      if (user.dayOfWeekId === null) user.dayOfWeekId = undefined;
+      if (user.language === null) user.language = undefined;
+      if (user.dayOfWeek === null) user.dayOfWeek = undefined;
+      result.user = user;
+    }
+    // Cast explicite pour satisfaire le typage
+    return result as unknown as AuthResponseDto;
   }
 
   /**
@@ -30,7 +49,18 @@ export class AuthController {
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
   ): Promise<AuthResponseDto> {
-    return this.authService.refreshToken(refreshTokenDto.refresh_token);
+    const result = await this.authService.refreshToken(
+      refreshTokenDto.refresh_token,
+    );
+    if ('user' in result && result.user) {
+      const user = result.user as any;
+      if (user.languageId === null) user.languageId = undefined;
+      if (user.dayOfWeekId === null) user.dayOfWeekId = undefined;
+      if (user.language === null) user.language = undefined;
+      if (user.dayOfWeek === null) user.dayOfWeek = undefined;
+      result.user = user;
+    }
+    return result as unknown as AuthResponseDto;
   }
 
   /**
@@ -43,5 +73,25 @@ export class AuthController {
   ): Promise<LogoutResponseDto> {
     if (!req.user) throw new UnauthorizedException('User not found in request');
     return this.authService.logout(req.user.sub);
+  }
+
+  /**
+   * Resets a user's password and forcibly logs out the user by revoking their refresh token.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/reset-password')
+  async resetPassword(
+    @Req() req: Request & { user?: JwtUser },
+    @Param('id') id: string,
+  ) {
+    const user = req.user;
+    const userId = parseInt(id, 10);
+    // On délègue la logique d'autorisation à usersService.resetPassword
+    const result = await this.authService['usersService'].resetPassword(userId);
+    // Si l'utilisateur se reset lui-même, on le déconnecte
+    if (user?.sub === userId) {
+      await this.authService.logout(userId);
+    }
+    return result;
   }
 }

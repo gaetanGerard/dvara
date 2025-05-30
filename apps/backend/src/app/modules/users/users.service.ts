@@ -15,6 +15,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import * as bcrypt from 'bcrypt';
 import { removePassword } from '../../common/utils/remove-password.util';
+import { Language } from '../../common/enums/language.enums';
+import { DayOfWeek } from '../../common/enums/dayofweek.enums';
 
 @Injectable()
 export class UsersService {
@@ -46,13 +48,19 @@ export class UsersService {
       let groupConnect: { id: number }[] = [];
       let adminGroupConnect: { id: number }[] = [];
       if (userCount === 0) {
-        // Premier utilisateur : SUPER_ADMIN
+        // Premier utilisateur : SUPER_ADMIN + EVERYONE
         const superAdminGroup = await this.prisma.group.findUnique({
           where: { name: 'SUPER_ADMIN' },
+        });
+        const everyoneGroup = await this.prisma.group.findUnique({
+          where: { name: 'EVERYONE' },
         });
         if (superAdminGroup) {
           groupConnect = [{ id: superAdminGroup.id }];
           adminGroupConnect = [{ id: superAdminGroup.id }];
+        }
+        if (everyoneGroup) {
+          groupConnect.push({ id: everyoneGroup.id });
         }
       } else {
         // Utilisateur classique : EVERYONE
@@ -77,6 +85,22 @@ export class UsersService {
         ];
       }
 
+      // Valeurs par défaut pour languageId et dayOfWeekId si non fournis
+      let languageId = createUserDto.languageId;
+      let dayOfWeekId = createUserDto.dayOfWeekId;
+      if (!languageId) {
+        const lang = await this.prisma.language.findUnique({
+          where: { iso: Language.FR },
+        });
+        if (lang) languageId = lang.id;
+      }
+      if (!dayOfWeekId) {
+        const dow = await this.prisma.dayOfWeek.findUnique({
+          where: { name: DayOfWeek.MONDAY },
+        });
+        if (dow) dayOfWeekId = dow.id;
+      }
+
       const user = await this.prisma.user.create({
         data: {
           name: createUserDto.name,
@@ -84,8 +108,8 @@ export class UsersService {
           email: createUserDto.email,
           password: hashedPassword,
           image: createUserDto.image,
-          languageId: createUserDto.languageId,
-          dayOfWeekId: createUserDto.dayOfWeekId,
+          languageId,
+          dayOfWeekId,
           homeDashboard: createUserDto.homeDashboard,
           groups: { connect: groupConnect },
           adminGroups: { connect: adminGroupConnect },
@@ -97,8 +121,14 @@ export class UsersService {
           dayOfWeek: true,
         },
       });
-
-      return removePassword(user);
+      // Supprime refreshToken du retour
+      const { refreshToken, ...userWithoutRefresh } = user;
+      // Corrige language et dayOfWeek pour ne jamais être null
+      return removePassword({
+        ...userWithoutRefresh,
+        language: user.language ?? { iso: Language.FR, name: 'Français' },
+        dayOfWeek: user.dayOfWeek ?? { name: DayOfWeek.MONDAY },
+      });
     } catch (error) {
       const err = error as { code?: string; message?: string };
       throw new BadRequestException(
@@ -271,5 +301,33 @@ export class UsersService {
       data: { password: hashed },
     });
     return { message: 'Mot de passe mis à jour avec succès' };
+  }
+
+  /**
+   * Demande de réinitialisation du mot de passe (self ou super_admin).
+   * Supprime le mot de passe et le refreshToken, et met resetPasswordRequested à true.
+   */
+  async resetPassword(userId: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: '',
+          refreshToken: null,
+          resetPasswordRequested: true,
+        },
+      });
+      return {
+        message: 'Demande de réinitialisation du mot de passe enregistrée.',
+      };
+    } catch (error) {
+      const err = error as { code?: string; message?: string };
+      if (err.code === 'P2025')
+        throw new NotFoundException('Utilisateur non trouvé');
+      throw new BadRequestException(
+        err.message ||
+          'Erreur lors de la demande de réinitialisation du mot de passe',
+      );
+    }
   }
 }
