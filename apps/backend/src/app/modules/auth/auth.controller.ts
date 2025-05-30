@@ -29,7 +29,6 @@ export class AuthController {
       createAuthDto.email,
       createAuthDto.password,
     );
-    // Correction stricte : transformer null en undefined pour les champs number et relations
     if (result.user) {
       const user = result.user as any;
       if (user.languageId === null) user.languageId = undefined;
@@ -38,7 +37,6 @@ export class AuthController {
       if (user.dayOfWeek === null) user.dayOfWeek = undefined;
       result.user = user;
     }
-    // Cast explicite pour satisfaire le typage
     return result as unknown as AuthResponseDto;
   }
 
@@ -86,9 +84,7 @@ export class AuthController {
   ) {
     const user = req.user;
     const userId = parseInt(id, 10);
-    // On délègue la logique d'autorisation à usersService.resetPassword
     const result = await this.authService['usersService'].resetPassword(userId);
-    // Si l'utilisateur se reset lui-même, on le déconnecte
     if (user?.sub === userId) {
       await this.authService.logout(userId);
     }

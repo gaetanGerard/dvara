@@ -1,7 +1,6 @@
 import { IsString, MinLength } from 'class-validator';
 /**
- * Data Transfer Object for changing a user's password.
- * Validates old and new password fields.
+ * DTO for changing a user's password (validates old and new password fields)
  */
 export class ChangePasswordDto {
   @IsString()
@@ -9,7 +8,7 @@ export class ChangePasswordDto {
 
   @IsString()
   @MinLength(8, {
-    message: 'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+    message: 'The new password must be at least 8 characters long.',
   })
   newPassword: string;
 }

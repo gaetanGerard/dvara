@@ -32,23 +32,20 @@ export class UsersService {
         where: { email: createUserDto.email },
       });
       if (existing)
-        throw new BadRequestException('Cet email est déjà utilisé.');
+        throw new BadRequestException('This email is already in use.');
 
       const existingPseudo = await this.prisma.user.findUnique({
         where: { pseudo: createUserDto.pseudo },
       });
       if (existingPseudo)
-        throw new BadRequestException('Ce pseudo est déjà utilisé.');
+        throw new BadRequestException('This pseudo is already in use.');
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-      // Vérifier s'il existe déjà un utilisateur
       const userCount = await this.prisma.user.count();
-      // Utiliser le typage explicite pour éviter l'erreur TypeScript
       let groupConnect: { id: number }[] = [];
       let adminGroupConnect: { id: number }[] = [];
       if (userCount === 0) {
-        // Premier utilisateur : SUPER_ADMIN + EVERYONE
         const superAdminGroup = await this.prisma.group.findUnique({
           where: { name: 'SUPER_ADMIN' },
         });
@@ -63,7 +60,6 @@ export class UsersService {
           groupConnect.push({ id: everyoneGroup.id });
         }
       } else {
-        // Utilisateur classique : EVERYONE
         const everyoneGroup = await this.prisma.group.findUnique({
           where: { name: 'EVERYONE' },
         });
@@ -71,7 +67,6 @@ export class UsersService {
           groupConnect = [{ id: everyoneGroup.id }];
         }
       }
-      // Ajout des groupes supplémentaires si fournis
       if (createUserDto.groupIds) {
         groupConnect = [
           ...groupConnect,
@@ -85,7 +80,6 @@ export class UsersService {
         ];
       }
 
-      // Valeurs par défaut pour languageId et dayOfWeekId si non fournis
       let languageId = createUserDto.languageId;
       let dayOfWeekId = createUserDto.dayOfWeekId;
       if (!languageId) {
@@ -121,9 +115,7 @@ export class UsersService {
           dayOfWeek: true,
         },
       });
-      // Supprime refreshToken du retour
       const { refreshToken, ...userWithoutRefresh } = user;
-      // Corrige language et dayOfWeek pour ne jamais être null
       return removePassword({
         ...userWithoutRefresh,
         language: user.language ?? { iso: Language.FR, name: 'Français' },
@@ -132,7 +124,7 @@ export class UsersService {
     } catch (error) {
       const err = error as { code?: string; message?: string };
       throw new BadRequestException(
-        err.message || "Erreur lors de la création de l'utilisateur",
+        err.message || 'Error while creating the user',
       );
     }
   }
@@ -154,7 +146,7 @@ export class UsersService {
     } catch (error) {
       const err = error as { message?: string };
       throw new BadRequestException(
-        err.message || 'Erreur lors de la récupération des utilisateurs',
+        err.message || 'Error while retrieving users',
       );
     }
   }
@@ -174,12 +166,12 @@ export class UsersService {
           dayOfWeek: true,
         },
       });
-      if (!user) throw new NotFoundException('Utilisateur non trouvé');
+      if (!user) throw new NotFoundException('User not found');
       return removePassword(user);
     } catch (error) {
       const err = error as { message?: string };
       throw new BadRequestException(
-        err.message || "Erreur lors de la récupération de l'utilisateur",
+        err.message || 'Error while retrieving the user',
       );
     }
   }
@@ -195,7 +187,7 @@ export class UsersService {
       const err = error as { message?: string };
       throw new BadRequestException(
         err.message ||
-          "Erreur lors de la récupération de l'utilisateur par email",
+          "Errror while retrieving the user by email, maybe the user doesn't exist.",
       );
     }
   }
@@ -212,18 +204,17 @@ export class UsersService {
           where: { email: updateUserDto.email },
         });
         if (existing && existing.id !== id)
-          throw new BadRequestException('Cet email est déjà utilisé.');
+          throw new BadRequestException('This email is already use.');
       }
       if (updateUserDto.pseudo) {
         const existingPseudo = await this.prisma.user.findUnique({
           where: { pseudo: updateUserDto.pseudo },
         });
         if (existingPseudo && existingPseudo.id !== id)
-          throw new BadRequestException('Ce pseudo est déjà utilisé.');
+          throw new BadRequestException('This pseudo is already use.');
       }
       const { password, groupIds, adminGroupIds, ...data } = updateUserDto;
 
-      // Nettoyage des undefined dans data
       const cleanedData = Object.fromEntries(
         Object.entries(data).filter(([_, v]) => v !== undefined),
       );
@@ -249,10 +240,9 @@ export class UsersService {
       return removePassword(user);
     } catch (error) {
       const err = error as { code?: string; message?: string };
-      if (err.code === 'P2025')
-        throw new NotFoundException('Utilisateur non trouvé');
+      if (err.code === 'P2025') throw new NotFoundException('User not found');
       throw new BadRequestException(
-        err.message || "Erreur lors de la modification de l'utilisateur",
+        err.message || 'Error while updating the user',
       );
     }
   }
@@ -264,13 +254,12 @@ export class UsersService {
   async remove(id: number) {
     try {
       await this.prisma.user.delete({ where: { id } });
-      return { message: 'Utilisateur supprimé' };
+      return { message: 'User deleted' };
     } catch (error) {
       const err = error as { code?: string; message?: string };
-      if (err.code === 'P2025')
-        throw new NotFoundException('Utilisateur non trouvé');
+      if (err.code === 'P2025') throw new NotFoundException('User not found');
       throw new BadRequestException(
-        err.message || "Erreur lors de la suppression de l'utilisateur",
+        err.message || 'Error while deleting the user',
       );
     }
   }
@@ -282,16 +271,16 @@ export class UsersService {
    */
   async changePassword(id: number, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Utilisateur non trouvé');
+    if (!user) throw new NotFoundException('User not found');
 
     const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
     if (!isMatch) {
-      throw new BadRequestException('Ancien mot de passe incorrect');
+      throw new BadRequestException('Old password is incorrect');
     }
 
     if (dto.newPassword.length < 8) {
       throw new BadRequestException(
-        'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+        'The new password must be at least 8 characters long.',
       );
     }
 
@@ -300,12 +289,12 @@ export class UsersService {
       where: { id },
       data: { password: hashed },
     });
-    return { message: 'Mot de passe mis à jour avec succès' };
+    return { message: 'Password updated successfully' };
   }
 
   /**
-   * Demande de réinitialisation du mot de passe (self ou super_admin).
-   * Supprime le mot de passe et le refreshToken, et met resetPasswordRequested à true.
+   * Reset the password for a user, clearing the password field and setting a flag.
+   * @param userId - User id
    */
   async resetPassword(userId: number) {
     try {
@@ -318,15 +307,13 @@ export class UsersService {
         },
       });
       return {
-        message: 'Demande de réinitialisation du mot de passe enregistrée.',
+        message: 'Password reset request registered.',
       };
     } catch (error) {
       const err = error as { code?: string; message?: string };
-      if (err.code === 'P2025')
-        throw new NotFoundException('Utilisateur non trouvé');
+      if (err.code === 'P2025') throw new NotFoundException('User not found');
       throw new BadRequestException(
-        err.message ||
-          'Erreur lors de la demande de réinitialisation du mot de passe',
+        err.message || 'Error while requesting password reset',
       );
     }
   }

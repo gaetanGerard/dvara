@@ -1,3 +1,4 @@
+
 model DashPerm {
   id          Int    @id @default(autoincrement())
   name        String @unique

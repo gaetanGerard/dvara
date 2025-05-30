@@ -1,3 +1,4 @@
+
 model GroupSetting {
   id            Int    @id @default(autoincrement())
   group         Group  @relation(fields: [groupId], references: [id])

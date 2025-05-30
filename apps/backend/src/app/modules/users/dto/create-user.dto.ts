@@ -1,5 +1,5 @@
 /**
- * Data Transfer Object for creating a user.
+ * DTO for creating a user
  */
 import {
   IsEmail,
@@ -27,7 +27,7 @@ export class CreateUserDto {
 
   @IsString()
   @MinLength(8, {
-    message: 'Le mot de passe doit contenir au moins 8 caractères.',
+    message: 'The password must be at least 8 characters long.',
   })
   password: string;
 

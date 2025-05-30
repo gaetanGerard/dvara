@@ -21,10 +21,8 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
-    // Remove password before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...rest } = user;
-    // On récupère les groupes et adminGroups via un findOne complet
     const userFull = await this.usersService.findOne(user.id);
     const groupIds = Array.isArray(userFull.groups)
       ? userFull.groups.map((g: { id: number }) => g.id)
@@ -39,7 +37,6 @@ export class AuthService {
       languageId: userFull.languageId ?? undefined,
       dayOfWeekId: userFull.dayOfWeekId ?? undefined,
     };
-    // Generate JWT (durée configurable via .env)
     const payload = {
       sub: user.id,
       email: user.email,
@@ -98,7 +95,6 @@ export class AuthService {
     if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
-    // Récupérer les ids de groupes et adminGroups
     const groupIds = Array.isArray(user.groups)
       ? user.groups.map((g: { id: number }) => g.id)
       : [];

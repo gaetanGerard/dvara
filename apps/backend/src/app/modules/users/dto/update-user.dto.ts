@@ -1,6 +1,5 @@
 /**
- * Data Transfer Object for updating a user.
- * Inherits validation rules from CreateUserDto, all fields optional.
+ * DTO for updating a user (all fields optional)
  */
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
