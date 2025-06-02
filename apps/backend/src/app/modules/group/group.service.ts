@@ -7,31 +7,28 @@ import { PrismaService } from '../../common/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { Group as SystemGroup } from '../../common/enums/group.enums';
 
+// Service for managing groups, permissions, and settings
 @Injectable()
 export class GroupService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Create a new group with permissions and settings
   async create(createGroupDto: CreateGroupDto, user: any) {
-    // Vérifier que l'utilisateur est super_admin
     const superAdminGroup = await this.prisma.group.findUnique({
       where: { name: SystemGroup.SUPER_ADMIN },
     });
     if (!superAdminGroup)
-      throw new BadRequestException('Groupe SUPER_ADMIN introuvable');
+      throw new BadRequestException('SUPER_ADMIN group not found');
     if (!user.groupIds?.includes(superAdminGroup.id)) {
       throw new ForbiddenException(
-        "Vous n'avez pas le droit de créer un groupe.",
+        'You do not have permission to create a group.',
       );
     }
-
-    // Empêcher la création d'un groupe système
     if ((createGroupDto as any).system !== undefined) {
       throw new ForbiddenException(
-        "Impossible de créer un groupe système via l'API",
+        'System groups cannot be created via the API.',
       );
     }
-
-    // Vérifier l'existence des utilisateurs à ajouter
     let usersToConnect: { id: number }[] = [];
     if (createGroupDto.userIds && createGroupDto.userIds.length > 0) {
       const foundUsers = await this.prisma.user.findMany({
@@ -39,21 +36,15 @@ export class GroupService {
         select: { id: true },
       });
       if (foundUsers.length !== createGroupDto.userIds.length) {
-        throw new BadRequestException(
-          "Un ou plusieurs utilisateurs à ajouter n'existent pas",
-        );
+        throw new BadRequestException('One or more users to add do not exist.');
       }
       usersToConnect = foundUsers.map((u) => ({ id: u.id }));
     }
-
-    // Les super_admins sont toujours admins du groupe
     const superAdmins = await this.prisma.user.findMany({
       where: { groups: { some: { id: superAdminGroup.id } } },
       select: { id: true },
     });
     const superAdminIds = superAdmins.map((u) => u.id);
-
-    // Vérifier l'existence des admins à ajouter (hors super_admins)
     const adminsToConnect: { id: number }[] = superAdminIds.map((id) => ({
       id,
     }));
@@ -64,29 +55,23 @@ export class GroupService {
       });
       if (foundAdmins.length !== createGroupDto.adminIds.length) {
         throw new BadRequestException(
-          "Un ou plusieurs admins à ajouter n'existent pas",
+          'One or more admins to add do not exist.',
         );
       }
-      // Ajoute les admins fournis s'ils ne sont pas déjà super_admin
       for (const admin of foundAdmins) {
         if (!superAdminIds.includes(admin.id)) {
           adminsToConnect.push({ id: admin.id });
         }
       }
     }
-
-    // Vérifier unicité du nom du groupe
     const existingGroup = await this.prisma.group.findUnique({
       where: { name: createGroupDto.name },
     });
     if (existingGroup) {
-      throw new BadRequestException('Un groupe avec ce nom existe déjà.');
+      throw new BadRequestException('A group with this name already exists.');
     }
-
-    // Création dynamique des permissions si fournies, sinon permissions par défaut (tout à false)
     let groupPermissionIds: number[] | undefined = undefined;
     if (createGroupDto.permissions) {
-      // Pour chaque bloc de permissions, tous les champs non définis sont explicitement mis à false
       const appsPermData = {
         name: `${createGroupDto.name}_APPS`,
         canAdd: createGroupDto.permissions.appsPerm?.canAdd ?? false,
@@ -120,7 +105,6 @@ export class GroupService {
       const mediaPerm = await this.prisma.mediaPerm.create({
         data: mediaPermData,
       });
-      // Crée la GroupPermission associée
       const groupPerm = await this.prisma.groupPermission.create({
         data: {
           name: `${createGroupDto.name}_PERM`,
@@ -132,7 +116,6 @@ export class GroupService {
       });
       groupPermissionIds = [groupPerm.id];
     } else {
-      // Permissions par défaut (tout à false)
       const appsPerm = await this.prisma.appsPerm.create({
         data: {
           name: `${createGroupDto.name}_APPS`,
@@ -174,8 +157,6 @@ export class GroupService {
       });
       groupPermissionIds = [groupPerm.id];
     }
-
-    // Création du groupe
     const group = await this.prisma.group.create({
       data: {
         name: createGroupDto.name,
@@ -207,13 +188,13 @@ export class GroupService {
     return group;
   }
 
+  // List all groups accessible to the user
   async findAll(user: any) {
     const superAdminGroup = await this.prisma.group.findUnique({
       where: { name: SystemGroup.SUPER_ADMIN },
     });
     const isSuperAdmin = user.groupIds?.includes(superAdminGroup?.id);
     if (isSuperAdmin) {
-      // Super admin : retourne tous les groupes
       return this.prisma.group.findMany({
         include: {
           users: {
@@ -229,7 +210,6 @@ export class GroupService {
         },
       });
     }
-    // Pour tout autre utilisateur : retourne uniquement les groupes dont il est membre ou admin, sans les groupes système ni EVERYONE
     const groupIds = [
       ...(user.groupIds || []),
       ...(user.adminGroupIds || []),
@@ -259,14 +239,11 @@ export class GroupService {
           settings: true,
         },
       });
-      // Pour chaque groupe, filtre selon le rôle de l'utilisateur
       return groups.map((g) => {
         const isAdmin = user.adminGroupIds?.includes(g.id);
         if (isAdmin) {
-          // admin du groupe : accès complet
           return g;
         } else {
-          // membre lambda : accès restreint (pas de users, retourne seulement les champs autorisés)
           return {
             id: g.id,
             name: g.name,
@@ -277,17 +254,16 @@ export class GroupService {
         }
       });
     }
-    // Sinon, aucun groupe
     return [];
   }
 
+  // Get details of a group by id, with access control
   async findOne(id: number, user: any) {
     const superAdminGroup = await this.prisma.group.findUnique({
       where: { name: SystemGroup.SUPER_ADMIN },
     });
     const isSuperAdmin = user.groupIds?.includes(superAdminGroup?.id);
     if (isSuperAdmin) {
-      // Super admin : accès à tout
       return this.prisma.group.findUnique({
         where: { id },
         include: {
@@ -304,7 +280,6 @@ export class GroupService {
         },
       });
     }
-    // admin du groupe : accès complet
     if (user.adminGroupIds && user.adminGroupIds.includes(id)) {
       return this.prisma.group.findUnique({
         where: { id },
@@ -322,7 +297,6 @@ export class GroupService {
         },
       });
     }
-    // membre lambda : accès restreint (pas de users)
     if (user.groupIds && user.groupIds.includes(id)) {
       const group = await this.prisma.group.findUnique({
         where: { id },
@@ -337,7 +311,6 @@ export class GroupService {
         },
       });
       if (!group) return null;
-      // Retourne seulement les champs autorisés pour un lambda
       return {
         id: group.id,
         name: group.name,
@@ -346,10 +319,10 @@ export class GroupService {
         admins: group.admins,
       };
     }
-    // Sinon, accès refusé
-    throw new ForbiddenException("Vous n'avez pas accès à ce groupe.");
+    throw new ForbiddenException('You do not have access to this group.');
   }
 
+  // Update a group (admins, members, permissions, settings)
   async update(
     id: number,
     updateGroupDto: {
@@ -360,7 +333,6 @@ export class GroupService {
     },
     user: any,
   ) {
-    // Récupérer le groupe et les super_admins
     const group = await this.prisma.group.findUnique({
       where: { id },
       include: {
@@ -369,75 +341,57 @@ export class GroupService {
         permissions: true,
       },
     });
-    if (!group) throw new BadRequestException('Groupe introuvable');
-
-    // Empêcher la modification du nom ou du champ system pour un groupe système
+    if (!group) throw new BadRequestException('Group not found');
     if (group.system) {
       if (
         'name' in updateGroupDto &&
         updateGroupDto.name &&
         updateGroupDto.name !== group.name
       ) {
-        throw new ForbiddenException(
-          "Impossible de modifier le nom d'un groupe système.",
-        );
+        throw new ForbiddenException('Cannot rename a system group.');
       }
       if ('system' in updateGroupDto) {
         throw new ForbiddenException(
-          "Impossible de modifier le statut système d'un groupe système.",
+          'Cannot change the system status of a system group.',
         );
       }
     } else {
       if ('system' in updateGroupDto) {
         throw new ForbiddenException(
-          "Impossible de modifier le statut système d'un groupe.",
+          'Cannot change the system status of a group.',
         );
       }
     }
-
     const superAdminGroup = await this.prisma.group.findUnique({
       where: { name: SystemGroup.SUPER_ADMIN },
       include: { users: true },
     });
     if (!superAdminGroup)
-      throw new BadRequestException('Groupe SUPER_ADMIN introuvable');
+      throw new BadRequestException('SUPER_ADMIN group not found');
     const superAdminIds = superAdminGroup.users.map((u) => u.id);
     const isSuperAdmin = user.groupIds?.includes(superAdminGroup.id);
     const isGroupAdmin = user.adminGroupIds?.includes(id);
-
-    // Droit d'accès : super_admin ou admin du groupe
     if (!isSuperAdmin && !isGroupAdmin) {
       throw new ForbiddenException(
-        "Vous n'avez pas le droit de modifier ce groupe.",
+        'You do not have permission to update this group.',
       );
     }
-
-    // Gestion des admins
     let newAdminIds = group.admins.map((a) => a.id);
     if (isSuperAdmin && updateGroupDto.adminIds) {
-      // Seul un super_admin peut modifier la liste des admins
       newAdminIds = Array.from(
         new Set([...superAdminIds, ...updateGroupDto.adminIds]),
       );
-      // Toujours forcer les super_admins comme admins
       newAdminIds = Array.from(new Set([...superAdminIds, ...newAdminIds]));
     }
-    // Pour un admin non super_admin, il ne peut pas modifier la liste des admins
-    // (il ne peut ni ajouter ni retirer d'admin, même lui-même)
-
-    // Empêcher la suppression du dernier super_admin admin du groupe
     const adminsAfterUpdate = newAdminIds.filter((id) =>
       superAdminIds.includes(id),
     );
     if (adminsAfterUpdate.length === 0) {
       throw new BadRequestException(
-        'Il doit toujours rester au moins un super_admin admin du groupe.',
+        'There must always be at least one super_admin as group admin.',
       );
     }
-
-    // Si admin (non super_admin), il ne peut pas modifier la liste des admins (ajout/suppression)
     if (!isSuperAdmin && isGroupAdmin && updateGroupDto.adminIds) {
-      // Vérifie si la liste reçue est différente de la liste actuelle
       const currentAdminIds = group.admins.map((a) => a.id).sort();
       const requestedAdminIds = Array.from(
         new Set(updateGroupDto.adminIds),
@@ -447,28 +401,21 @@ export class GroupService {
         currentAdminIds.every((id, idx) => id === requestedAdminIds[idx]);
       if (!isSame) {
         throw new ForbiddenException(
-          "Seul un super_admin peut modifier la liste des admins d'un groupe.",
+          'Only a super_admin can modify the list of group admins.',
         );
       }
     }
-
-    // Gestion des membres (users)
     const newUserIds = updateGroupDto.userIds
       ? Array.from(new Set(updateGroupDto.userIds))
       : group.users.map((u) => u.id);
-
-    // Gestion des permissions
     if (updateGroupDto.permissions) {
-      // Seul super_admin ou admin du groupe peut modifier les permissions
       if (!isSuperAdmin && !isGroupAdmin) {
         throw new ForbiddenException(
-          'Vous ne pouvez pas modifier les permissions de ce groupe.',
+          'You cannot update the permissions of this group.',
         );
       }
-      // On suppose qu'il n'y a qu'un seul groupPermission par groupe (comme à la création)
       const groupPerm = group.permissions[0];
       if (groupPerm) {
-        // Update appsPerm
         if (
           updateGroupDto.permissions.appsPerm &&
           groupPerm.appsPermId != null
@@ -484,7 +431,6 @@ export class GroupService {
             },
           });
         }
-        // Update dashPerm
         if (
           updateGroupDto.permissions.dashPerm &&
           groupPerm.dashPermId != null
@@ -500,7 +446,6 @@ export class GroupService {
             },
           });
         }
-        // Update mediaPerm
         if (
           updateGroupDto.permissions.mediaPerm &&
           groupPerm.mediaPermId != null
@@ -520,10 +465,7 @@ export class GroupService {
         }
       }
     }
-
-    // Gestion des settings
     if (updateGroupDto.settings) {
-      // On récupère le GroupSetting lié au groupe (relation 1-1)
       const groupSetting = await this.prisma.groupSetting.findUnique({
         where: { groupId: group.id },
       });
@@ -541,13 +483,10 @@ export class GroupService {
         });
       }
     }
-
-    // Mise à jour du groupe
     const updateData: any = {
       admins: { set: newAdminIds.map((id) => ({ id })) },
       users: { set: newUserIds.map((id) => ({ id })) },
     };
-    // On n'autorise la mise à jour du nom que pour un groupe non système
     if (
       !group.system &&
       'name' in updateGroupDto &&
@@ -575,20 +514,16 @@ export class GroupService {
     return updatedGroup;
   }
 
+  // Delete a group with all related links and settings
   async remove(id: number, user: any) {
-    // Récupérer le groupe
     const group = await this.prisma.group.findUnique({
       where: { id },
       include: { admins: true, users: true, permissions: true },
     });
-    if (!group) throw new BadRequestException('Groupe introuvable');
-    // Empêcher la suppression d'un groupe système
+    if (!group) throw new BadRequestException('Group not found');
     if (group.system) {
-      throw new ForbiddenException(
-        'Impossible de supprimer un groupe système.',
-      );
+      throw new ForbiddenException('Cannot delete a system group.');
     }
-    // Vérifier droits : super_admin ou admin du groupe
     const superAdminGroup = await this.prisma.group.findUnique({
       where: { name: SystemGroup.SUPER_ADMIN },
     });
@@ -596,10 +531,9 @@ export class GroupService {
     const isGroupAdmin = group.admins.some((a) => a.id === user.sub);
     if (!isSuperAdmin && !isGroupAdmin) {
       throw new ForbiddenException(
-        "Vous n'avez pas le droit de supprimer ce groupe.",
+        'You do not have permission to delete this group.',
       );
     }
-    // Supprimer explicitement les liens many-to-many
     await this.prisma.group.update({
       where: { id },
       data: {
@@ -608,9 +542,7 @@ export class GroupService {
         permissions: { set: [] },
       },
     });
-    // Supprimer explicitement le GroupSetting lié (sécurité si cascade non actif)
     await this.prisma.groupSetting.deleteMany({ where: { groupId: id } });
-    // Suppression du groupe
     await this.prisma.group.delete({ where: { id } });
     return { success: true };
   }
