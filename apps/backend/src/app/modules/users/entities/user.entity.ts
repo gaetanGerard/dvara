@@ -1,5 +1,6 @@
 import { DayOfWeek } from '../../../common/enums/dayofweek.enums';
 import { Language } from '../../../common/enums/language.enums';
+import { Group } from '../../group/entities/group.entity';
 
 // Entity representing a user returned by the API (without password field)
 export class User {
@@ -12,8 +13,8 @@ export class User {
   language?: Language;
   dayOfWeekId?: number;
   dayOfWeek?: DayOfWeek;
-  groups: any[]; // Will need to be update after resource group is created
-  adminGroups: any[]; // Will need to be update after resource group is created
+  groups: Group[];
+  adminGroups: Group[];
   homeDashboard?: number;
   refreshToken?: string;
   createdAt: Date;
