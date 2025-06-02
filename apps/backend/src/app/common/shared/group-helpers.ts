@@ -153,3 +153,22 @@ export async function createGroupPermissions(
   });
   return [groupPerm.id];
 }
+
+// Prisma select/include centralisés pour DRY (exportés)
+export const groupUserSelect = {
+  id: true,
+  name: true,
+  pseudo: true,
+  email: true,
+};
+export const groupIncludeFull = {
+  users: { select: groupUserSelect },
+  admins: { select: groupUserSelect },
+  permissions: { include: { appsPerm: true, dashPerm: true, mediaPerm: true } },
+  settings: true,
+};
+export const groupIncludeAdminsPermsSettings = {
+  admins: { select: groupUserSelect },
+  permissions: { include: { appsPerm: true, dashPerm: true, mediaPerm: true } },
+  settings: true,
+};

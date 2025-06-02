@@ -15,6 +15,8 @@ import {
   dedupeIds,
   areIdArraysEqual,
   createGroupPermissions,
+  groupIncludeFull,
+  groupIncludeAdminsPermsSettings,
 } from '../../common/shared/group-helpers';
 
 // Service for managing groups, permissions, and settings
@@ -101,18 +103,7 @@ export class GroupService {
           ? { create: createGroupDto.settings }
           : undefined,
       },
-      include: {
-        users: { select: { id: true, name: true, pseudo: true, email: true } },
-        admins: { select: { id: true, name: true, pseudo: true, email: true } },
-        permissions: {
-          include: {
-            appsPerm: true,
-            dashPerm: true,
-            mediaPerm: true,
-          },
-        },
-        settings: true,
-      },
+      include: groupIncludeFull,
     });
     return group;
   }
@@ -125,18 +116,7 @@ export class GroupService {
     const isSuperAdmin = user.groupIds?.includes(superAdminGroup?.id);
     if (isSuperAdmin) {
       return this.prisma.group.findMany({
-        include: {
-          users: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          admins: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          permissions: {
-            include: { appsPerm: true, dashPerm: true, mediaPerm: true },
-          },
-          settings: true,
-        },
+        include: groupIncludeFull,
       });
     }
     const groupIds = [
@@ -155,18 +135,7 @@ export class GroupService {
           id: { in: groupIds, notIn: excludeIds },
           system: false,
         },
-        include: {
-          users: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          admins: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          permissions: {
-            include: { appsPerm: true, dashPerm: true, mediaPerm: true },
-          },
-          settings: true,
-        },
+        include: groupIncludeFull,
       });
       return groups.map((g) => {
         const isAdmin = user.adminGroupIds?.includes(g.id);
@@ -195,49 +164,19 @@ export class GroupService {
     if (isSuperAdmin) {
       return this.prisma.group.findUnique({
         where: { id },
-        include: {
-          users: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          admins: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          permissions: {
-            include: { appsPerm: true, dashPerm: true, mediaPerm: true },
-          },
-          settings: true,
-        },
+        include: groupIncludeFull,
       });
     }
     if (user.adminGroupIds && user.adminGroupIds.includes(id)) {
       return this.prisma.group.findUnique({
         where: { id },
-        include: {
-          users: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          admins: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          permissions: {
-            include: { appsPerm: true, dashPerm: true, mediaPerm: true },
-          },
-          settings: true,
-        },
+        include: groupIncludeFull,
       });
     }
     if (user.groupIds && user.groupIds.includes(id)) {
       const group = await this.prisma.group.findUnique({
         where: { id },
-        include: {
-          admins: {
-            select: { id: true, name: true, pseudo: true, email: true },
-          },
-          permissions: {
-            include: { appsPerm: true, dashPerm: true, mediaPerm: true },
-          },
-          settings: true,
-        },
+        include: groupIncludeAdminsPermsSettings,
       });
       if (!group) return null;
       return {
@@ -414,18 +353,7 @@ export class GroupService {
     const updatedGroup = await this.prisma.group.update({
       where: { id },
       data: updateData,
-      include: {
-        users: { select: { id: true, name: true, pseudo: true, email: true } },
-        admins: { select: { id: true, name: true, pseudo: true, email: true } },
-        permissions: {
-          include: {
-            appsPerm: true,
-            dashPerm: true,
-            mediaPerm: true,
-          },
-        },
-        settings: true,
-      },
+      include: groupIncludeFull,
     });
     return updatedGroup;
   }
