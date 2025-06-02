@@ -6,6 +6,16 @@ import {
 import { PrismaService } from '../../common/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { Group as SystemGroup } from '../../common/enums/group.enums';
+import {
+  getSuperAdminGroup,
+  getSuperAdminIds,
+  hasGroupAdminRights,
+  assertAtLeastOneSuperAdminAdmin,
+  isSuperAdmin,
+  isGroupAdmin,
+  dedupeIds,
+  areIdArraysEqual,
+} from '../../common/shared/group-helpers';
 
 // Service for managing groups, permissions, and settings
 @Injectable()
@@ -362,54 +372,41 @@ export class GroupService {
         );
       }
     }
-    const superAdminGroup = await this.prisma.group.findUnique({
-      where: { name: SystemGroup.SUPER_ADMIN },
-      include: { users: true },
-    });
+    const superAdminGroup = await getSuperAdminGroup(this.prisma, true);
     if (!superAdminGroup)
       throw new BadRequestException('SUPER_ADMIN group not found');
-    const superAdminIds = superAdminGroup.users.map((u) => u.id);
-    const isSuperAdmin = user.groupIds?.includes(superAdminGroup.id);
-    const isGroupAdmin = user.adminGroupIds?.includes(id);
-    if (!isSuperAdmin && !isGroupAdmin) {
+    const superAdminIds = getSuperAdminIds(superAdminGroup);
+    const typedUser = user as {
+      groupIds?: number[];
+      adminGroupIds?: number[];
+      sub?: number;
+    };
+    const isSuper = isSuperAdmin(typedUser, superAdminGroup.id);
+    const isAdmin = isGroupAdmin(typedUser, id);
+    if (!isSuper && !isAdmin) {
       throw new ForbiddenException(
         'You do not have permission to update this group.',
       );
     }
     let newAdminIds = group.admins.map((a) => a.id);
-    if (isSuperAdmin && updateGroupDto.adminIds) {
-      newAdminIds = Array.from(
-        new Set([...superAdminIds, ...updateGroupDto.adminIds]),
-      );
-      newAdminIds = Array.from(new Set([...superAdminIds, ...newAdminIds]));
+    if (isSuper && updateGroupDto.adminIds) {
+      newAdminIds = dedupeIds([...superAdminIds, ...updateGroupDto.adminIds]);
     }
-    const adminsAfterUpdate = newAdminIds.filter((id) =>
-      superAdminIds.includes(id),
-    );
-    if (adminsAfterUpdate.length === 0) {
-      throw new BadRequestException(
-        'There must always be at least one super_admin as group admin.',
-      );
-    }
-    if (!isSuperAdmin && isGroupAdmin && updateGroupDto.adminIds) {
-      const currentAdminIds = group.admins.map((a) => a.id).sort();
-      const requestedAdminIds = Array.from(
-        new Set(updateGroupDto.adminIds),
-      ).sort();
-      const isSame =
-        currentAdminIds.length === requestedAdminIds.length &&
-        currentAdminIds.every((id, idx) => id === requestedAdminIds[idx]);
-      if (!isSame) {
+    assertAtLeastOneSuperAdminAdmin(newAdminIds, superAdminIds);
+    if (!isSuper && isAdmin && updateGroupDto.adminIds) {
+      const currentAdminIds = group.admins.map((a) => a.id);
+      const requestedAdminIds = dedupeIds(updateGroupDto.adminIds);
+      if (!areIdArraysEqual(currentAdminIds, requestedAdminIds)) {
         throw new ForbiddenException(
           'Only a super_admin can modify the list of group admins.',
         );
       }
     }
     const newUserIds = updateGroupDto.userIds
-      ? Array.from(new Set(updateGroupDto.userIds))
+      ? dedupeIds(updateGroupDto.userIds)
       : group.users.map((u) => u.id);
     if (updateGroupDto.permissions) {
-      if (!isSuperAdmin && !isGroupAdmin) {
+      if (!isSuper && !isAdmin) {
         throw new ForbiddenException(
           'You cannot update the permissions of this group.',
         );
@@ -524,12 +521,15 @@ export class GroupService {
     if (group.system) {
       throw new ForbiddenException('Cannot delete a system group.');
     }
-    const superAdminGroup = await this.prisma.group.findUnique({
-      where: { name: SystemGroup.SUPER_ADMIN },
-    });
-    const isSuperAdmin = user.groupIds?.includes(superAdminGroup?.id);
-    const isGroupAdmin = group.admins.some((a) => a.id === user.sub);
-    if (!isSuperAdmin && !isGroupAdmin) {
+    const superAdminGroup = await getSuperAdminGroup(this.prisma);
+    if (!superAdminGroup)
+      throw new BadRequestException('SUPER_ADMIN group not found');
+    const typedUser = user as {
+      groupIds?: number[];
+      adminGroupIds?: number[];
+      sub?: number;
+    };
+    if (!hasGroupAdminRights(typedUser, group, superAdminGroup.id)) {
       throw new ForbiddenException(
         'You do not have permission to delete this group.',
       );
