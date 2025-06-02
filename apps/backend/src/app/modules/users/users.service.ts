@@ -58,6 +58,7 @@ export class UsersService {
         }
         if (everyoneGroup) {
           groupConnect.push({ id: everyoneGroup.id });
+          adminGroupConnect.push({ id: everyoneGroup.id });
         }
       } else {
         const everyoneGroup = await this.prisma.group.findUnique({

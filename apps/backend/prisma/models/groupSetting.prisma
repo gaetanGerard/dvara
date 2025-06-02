@@ -1,7 +1,6 @@
-
 model GroupSetting {
   id            Int    @id @default(autoincrement())
-  group         Group  @relation(fields: [groupId], references: [id])
+  group         Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId       Int    @unique
   homeDashboard Int?
 }
