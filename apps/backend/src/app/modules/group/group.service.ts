@@ -9,12 +9,12 @@ import { Group as SystemGroup } from '../../common/enums/group.enums';
 import {
   getSuperAdminGroup,
   getSuperAdminIds,
-  hasGroupAdminRights,
   assertAtLeastOneSuperAdminAdmin,
   isSuperAdmin,
   isGroupAdmin,
   dedupeIds,
   areIdArraysEqual,
+  createGroupPermissions,
 } from '../../common/shared/group-helpers';
 
 // Service for managing groups, permissions, and settings
@@ -81,92 +81,11 @@ export class GroupService {
       throw new BadRequestException('A group with this name already exists.');
     }
     let groupPermissionIds: number[] | undefined = undefined;
-    if (createGroupDto.permissions) {
-      const appsPermData = {
-        name: `${createGroupDto.name}_APPS`,
-        canAdd: createGroupDto.permissions.appsPerm?.canAdd ?? false,
-        canEdit: createGroupDto.permissions.appsPerm?.canEdit ?? false,
-        canView: createGroupDto.permissions.appsPerm?.canView ?? false,
-        canUse: createGroupDto.permissions.appsPerm?.canUse ?? false,
-        canDelete: createGroupDto.permissions.appsPerm?.canDelete ?? false,
-      };
-      const dashPermData = {
-        name: `${createGroupDto.name}_DASH`,
-        canAdd: createGroupDto.permissions.dashPerm?.canAdd ?? false,
-        canEdit: createGroupDto.permissions.dashPerm?.canEdit ?? false,
-        canView: createGroupDto.permissions.dashPerm?.canView ?? false,
-        canUse: createGroupDto.permissions.dashPerm?.canUse ?? false,
-        canDelete: createGroupDto.permissions.dashPerm?.canDelete ?? false,
-      };
-      const mediaPermData = {
-        name: `${createGroupDto.name}_MEDIA`,
-        canUpload: createGroupDto.permissions.mediaPerm?.canUpload ?? false,
-        canDelete: createGroupDto.permissions.mediaPerm?.canDelete ?? false,
-        canEdit: createGroupDto.permissions.mediaPerm?.canEdit ?? false,
-        canView: createGroupDto.permissions.mediaPerm?.canView ?? false,
-        canUse: createGroupDto.permissions.mediaPerm?.canUse ?? false,
-      };
-      const appsPerm = await this.prisma.appsPerm.create({
-        data: appsPermData,
-      });
-      const dashPerm = await this.prisma.dashPerm.create({
-        data: dashPermData,
-      });
-      const mediaPerm = await this.prisma.mediaPerm.create({
-        data: mediaPermData,
-      });
-      const groupPerm = await this.prisma.groupPermission.create({
-        data: {
-          name: `${createGroupDto.name}_PERM`,
-          description: `Permissions for group ${createGroupDto.name}`,
-          appsPermId: appsPerm.id,
-          dashPermId: dashPerm.id,
-          mediaPermId: mediaPerm.id,
-        },
-      });
-      groupPermissionIds = [groupPerm.id];
-    } else {
-      const appsPerm = await this.prisma.appsPerm.create({
-        data: {
-          name: `${createGroupDto.name}_APPS`,
-          canAdd: false,
-          canEdit: false,
-          canView: false,
-          canUse: false,
-          canDelete: false,
-        },
-      });
-      const dashPerm = await this.prisma.dashPerm.create({
-        data: {
-          name: `${createGroupDto.name}_DASH`,
-          canAdd: false,
-          canEdit: false,
-          canView: false,
-          canUse: false,
-          canDelete: false,
-        },
-      });
-      const mediaPerm = await this.prisma.mediaPerm.create({
-        data: {
-          name: `${createGroupDto.name}_MEDIA`,
-          canUpload: false,
-          canDelete: false,
-          canEdit: false,
-          canView: false,
-          canUse: false,
-        },
-      });
-      const groupPerm = await this.prisma.groupPermission.create({
-        data: {
-          name: `${createGroupDto.name}_PERM`,
-          description: `Default permissions for group ${createGroupDto.name}`,
-          appsPermId: appsPerm.id,
-          dashPermId: dashPerm.id,
-          mediaPermId: mediaPerm.id,
-        },
-      });
-      groupPermissionIds = [groupPerm.id];
-    }
+    groupPermissionIds = await createGroupPermissions(
+      this.prisma,
+      createGroupDto.name,
+      createGroupDto.permissions,
+    );
     const group = await this.prisma.group.create({
       data: {
         name: createGroupDto.name,
@@ -529,21 +448,26 @@ export class GroupService {
       adminGroupIds?: number[];
       sub?: number;
     };
-    if (!hasGroupAdminRights(typedUser, group, superAdminGroup.id)) {
+    if (
+      !isSuperAdmin(typedUser, superAdminGroup.id) &&
+      !isGroupAdmin(typedUser, id)
+    ) {
       throw new ForbiddenException(
         'You do not have permission to delete this group.',
       );
     }
-    await this.prisma.group.update({
-      where: { id },
-      data: {
-        users: { set: [] },
-        admins: { set: [] },
-        permissions: { set: [] },
-      },
-    });
-    await this.prisma.groupSetting.deleteMany({ where: { groupId: id } });
-    await this.prisma.group.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.group.update({
+        where: { id },
+        data: {
+          users: { set: [] },
+          admins: { set: [] },
+          permissions: { set: [] },
+        },
+      }),
+      this.prisma.groupSetting.deleteMany({ where: { groupId: id } }),
+      this.prisma.group.delete({ where: { id } }),
+    ]);
     return { success: true };
   }
 }
