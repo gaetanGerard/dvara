@@ -6,9 +6,10 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GroupModule } from './modules/group/group.module';
 import { MediaModule } from './modules/media/media.module';
+import { ApplicationModule } from './modules/application/application.module';
 
 @Module({
-  imports: [CommonModule, UsersModule, AuthModule, GroupModule, MediaModule],
+  imports: [CommonModule, UsersModule, AuthModule, GroupModule, MediaModule, ApplicationModule],
   controllers: [AppController],
   providers: [AppService],
 })
