@@ -1,9 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /*
  * UsersService provides all CRUD operations for users, including secure password handling.
- * It ensures password hashing, unique email validation, and explicit error management.
- * The password field is always removed from user objects before returning them.
+ * - Ensures password hashing, unique email and pseudo validation, and explicit error management.
+ * - The password field is always removed from user objects before returning them.
+ *
+ * Main methods:
+ *   - create: Create a user with hashed password and group/adminGroup logic
+ *   - findAll: List all users (with relations), password removed
+ *   - findOne: Get a user by id (with relations), password removed
+ *   - findByEmail: Get a user by email
+ *   - update: Update user fields (except password), with unique checks
+ *   - remove: Delete a user by id
+ *   - changePassword: Change password with old password verification
+ *   - resetPassword: Reset password and set reset flag
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ *
+ * Usage example:
+ *   const user = await usersService.create(createUserDto);
+ *   const users = await usersService.findAll();
+ *   const updated = await usersService.update(id, updateUserDto);
  */
+
 import {
   Injectable,
   BadRequestException,
@@ -21,6 +39,9 @@ import { DayOfWeek } from '../../common/enums/dayofweek.enums';
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // Allow MediaService injection from the controller (for deleteMedia logic)
+  mediaService?: any;
 
   /**
    * Creates a new user with hashed password and unique email validation.
@@ -102,7 +123,7 @@ export class UsersService {
           pseudo: createUserDto.pseudo,
           email: createUserDto.email,
           password: hashedPassword,
-          image: createUserDto.image,
+          mediaId: createUserDto.mediaId,
           languageId,
           dayOfWeekId,
           homeDashboard: createUserDto.homeDashboard,
@@ -114,6 +135,7 @@ export class UsersService {
           adminGroups: true,
           language: true,
           dayOfWeek: true,
+          media: true,
         },
       });
       const { refreshToken, ...userWithoutRefresh } = user;
@@ -141,6 +163,7 @@ export class UsersService {
           adminGroups: true,
           language: true,
           dayOfWeek: true,
+          media: true,
         },
       });
       return users.map(removePassword);
@@ -165,6 +188,7 @@ export class UsersService {
           adminGroups: true,
           language: true,
           dayOfWeek: true,
+          media: true,
         },
       });
       if (!user) throw new NotFoundException('User not found');
@@ -236,6 +260,7 @@ export class UsersService {
           adminGroups: true,
           language: true,
           dayOfWeek: true,
+          media: true,
         },
       });
       return removePassword(user);
