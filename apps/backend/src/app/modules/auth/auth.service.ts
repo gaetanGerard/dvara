@@ -32,7 +32,7 @@ export class AuthService {
       : [];
     const userForResponse = {
       ...userFull,
-      image: userFull.image ?? undefined,
+      image: userFull.media?.url ?? undefined,
       homeDashboard: userFull.homeDashboard ?? undefined,
       languageId: userFull.languageId ?? undefined,
       dayOfWeekId: userFull.dayOfWeekId ?? undefined,
