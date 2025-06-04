@@ -1,3 +1,22 @@
+/**
+ * GroupController exposes all group-related API endpoints.
+ * - Handles group creation, update, deletion, and retrieval.
+ * - Secures endpoints with JWT authentication and group-based access control.
+ * - Delegates business logic to GroupService.
+ *
+ * Main endpoints:
+ *   - POST /group: Create a new group
+ *   - GET /group: List all groups accessible to the user
+ *   - GET /group/:id: Get details of a group by id
+ *   - PATCH /group/:id: Update a group (members, admins, permissions, settings)
+ *   - DELETE /group/:id: Delete a group
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ *
+ * Usage example:
+ *   const group = await groupController.create(req, createGroupDto);
+ *   const groups = await groupController.findAll(req);
+ */
 import {
   Controller,
   Get,

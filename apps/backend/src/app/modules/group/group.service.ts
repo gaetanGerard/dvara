@@ -1,3 +1,23 @@
+/**
+ * GroupService manages all group-related business logic and data access.
+ * - Handles group creation, update, deletion, permissions, and settings.
+ * - Manages group membership, admin roles, and group permissions.
+ * - Integrates with Prisma for all group-related database operations.
+ *
+ * Main methods:
+ *   - create: Create a new group with permissions and settings
+ *   - findAll: List all groups accessible to the user
+ *   - findOne: Get details of a group by id, with access control
+ *   - update: Update group members, admins, permissions, and settings
+ *   - remove: Delete a group and all related links/settings
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ *
+ * Usage example:
+ *   const group = await groupService.create(createGroupDto, user);
+ *   const groups = await groupService.findAll(user);
+ *   const updated = await groupService.update(id, updateGroupDto, user);
+ */
 import {
   Injectable,
   BadRequestException,
