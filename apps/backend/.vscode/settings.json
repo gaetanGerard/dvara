@@ -6,5 +6,6 @@
       "name": "dvara",
       "database": "./prisma/dev.db"
     }
-  ]
+  ],
+  "postman.settings.dotenv-detection-notification-visibility": false
 }

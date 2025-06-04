@@ -4,7 +4,8 @@ model User {
   pseudo                 String    @unique
   email                  String    @unique
   password               String
-  image                  String?
+  mediaId                Int?
+  media                  Media?    @relation("UserMedia", fields: [mediaId], references: [id])
   languageId             Int?
   language               Language? @relation(fields: [languageId], references: [id])
   dayOfWeekId            Int?

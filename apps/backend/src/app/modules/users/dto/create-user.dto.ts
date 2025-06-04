@@ -32,10 +32,6 @@ export class CreateUserDto {
   password: string;
 
   @IsOptional()
-  @IsString()
-  image?: string;
-
-  @IsOptional()
   @IsInt()
   languageId?: number;
 
@@ -63,4 +59,7 @@ export class CreateUserDto {
 
   @IsOptional()
   dayOfWeek?: DayOfWeek;
+
+  @IsOptional()
+  mediaId?: number | null;
 }

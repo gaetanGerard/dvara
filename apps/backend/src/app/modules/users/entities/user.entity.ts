@@ -1,6 +1,7 @@
 import { DayOfWeek } from '../../../common/enums/dayofweek.enums';
 import { Language } from '../../../common/enums/language.enums';
 import { Group } from '../../group/entities/group.entity';
+import { Media } from '../../media/entities/media.entity';
 
 // Entity representing a user returned by the API (without password field)
 export class User {
@@ -8,7 +9,7 @@ export class User {
   name: string;
   pseudo: string;
   email: string;
-  image?: string;
+  media?: Media;
   languageId?: number;
   language?: Language;
   dayOfWeekId?: number;
