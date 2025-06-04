@@ -1,3 +1,19 @@
+/**
+ * AuthController exposes all authentication-related API endpoints.
+ * - Handles user login, token refresh, and logout operations.
+ * - Secures endpoints and delegates authentication logic to AuthService.
+ *
+ * Main endpoints:
+ *   - POST /auth/login: Authenticate user and issue tokens
+ *   - POST /auth/refresh: Refresh JWT token using a valid refresh token
+ *   - POST /auth/logout: Invalidate the user's refresh token
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ *
+ * Usage example:
+ *   const tokens = await authController.login(loginDto);
+ *   const refreshed = await authController.refresh(refreshDto);
+ */
 import {
   Controller,
   Post,

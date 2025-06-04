@@ -1,3 +1,21 @@
+/**
+ * AuthService handles all authentication logic for the application.
+ * - Manages user login, JWT token generation, refresh token management, and validation.
+ * - Provides methods for validating credentials, issuing tokens, and refreshing sessions.
+ * - Integrates with UsersService for user lookup and password verification.
+ *
+ * Main methods:
+ *   - validateUser: Validates user credentials and returns user data if valid
+ *   - login: Issues JWT and refresh tokens for a user
+ *   - refreshToken: Issues a new JWT token using a valid refresh token
+ *   - logout: Invalidates the user's refresh token
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ *
+ * Usage example:
+ *   const tokens = await authService.login(userDto);
+ *   const user = await authService.validateUser(email, password);
+ */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
