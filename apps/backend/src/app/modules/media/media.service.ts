@@ -177,12 +177,13 @@ export class MediaService {
   }
 
   /**
-   * Checks if a media is used by another user or resource (excluding the current userId)
-   * Can be extended to check other resources (dashboard, app, etc.)
+   * Checks if a media is used by another resource (user, application, dashboard, etc.)
+   * Returns true if used elsewhere, false otherwise
    */
   async isMediaUsedElsewhere(
     mediaId: number,
     excludeUserId?: number,
+    excludeApplicationId?: number,
   ): Promise<boolean> {
     // Check if another user uses this media
     const user = await this.prisma.user.findFirst({
@@ -191,8 +192,17 @@ export class MediaService {
         NOT: excludeUserId ? { id: excludeUserId } : undefined,
       },
     });
-    // TODO: Add other checks here (dashboard, app, etc.)
-    return !!user;
+    if (user) return true;
+    // Check if another application uses this media
+    const application = await this.prisma.application.findFirst({
+      where: {
+        iconMediaId: mediaId,
+        NOT: excludeApplicationId ? { id: excludeApplicationId } : undefined,
+      },
+    });
+    if (application) return true;
+    // TODO: Extend for dashboard, widgets, etc. if needed
+    return false;
   }
 
   /**
