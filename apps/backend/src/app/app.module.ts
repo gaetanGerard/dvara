@@ -7,9 +7,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { GroupModule } from './modules/group/group.module';
 import { MediaModule } from './modules/media/media.module';
 import { ApplicationModule } from './modules/application/application.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
-  imports: [CommonModule, UsersModule, AuthModule, GroupModule, MediaModule, ApplicationModule],
+  imports: [CommonModule, UsersModule, AuthModule, GroupModule, MediaModule, ApplicationModule, DashboardModule],
   controllers: [AppController],
   providers: [AppService],
 })
