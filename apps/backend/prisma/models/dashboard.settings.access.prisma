@@ -1,0 +1,7 @@
+// Main access model for dashboard permissions
+model DashboardSettingsAccess {
+  id      Int      @id @default(autoincrement())
+  users   DashboardSettingsAccessUser[]
+  groups  DashboardSettingsAccessGroup[]
+  settings DashboardSettings?
+}

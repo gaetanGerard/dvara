@@ -1,0 +1,11 @@
+// Dynamic content section model for the dashboard
+model DashboardContentSection {
+  id          Int    @id @default(autoincrement())
+  name        String
+  order       Int
+  size        String?
+  content     DashboardContent? @relation(fields: [contentId], references: [id])
+  contentId   Int?
+  position     String? // JSON or string to store the section's position
+  layoutData   String? // JSON to store custom layout information (optional)
+}

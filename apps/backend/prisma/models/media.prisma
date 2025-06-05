@@ -1,11 +1,15 @@
 // Prisma model for Media (image)
 model Media {
-  id        Int      @id @default(autoincrement())
-  name      String
-  imgName   String  @unique
-  alt       String
-  url       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]   @relation("UserMedia")
+  id            Int      @id @default(autoincrement())
+  name          String
+  imgName       String  @unique
+  alt           String
+  url           String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  users         User[]   @relation("UserMedia")
+  applications  Application[] @relation("ApplicationIconMedia")
+  backgrounds   DashboardSettingsBackground[]
+  dashboardGeneralLogoMedias    DashboardSettingsGeneral[] @relation("DashboardGeneralLogoMedia")
+  dashboardGeneralFaviconMedias DashboardSettingsGeneral[] @relation("DashboardGeneralFaviconMedia")
 }

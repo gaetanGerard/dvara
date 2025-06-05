@@ -1,0 +1,15 @@
+// Enum for access permissions
+enum DashboardAccessPermission {
+  VIEW
+  EDIT
+  FULL_ACCESS
+}
+
+model DashboardSettingsAccessUser {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  permission DashboardAccessPermission
+  accessId   Int
+  access     DashboardSettingsAccess @relation(fields: [accessId], references: [id])
+}

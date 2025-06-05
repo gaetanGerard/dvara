@@ -17,4 +17,6 @@ model User {
   resetPasswordRequested Boolean   @default(false)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+  dashboards              Dashboard[] @relation("UserDashboards")
+  accessUsers            DashboardSettingsAccessUser[]
 }

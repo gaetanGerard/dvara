@@ -1,0 +1,11 @@
+// General settings model for the dashboard
+model DashboardSettingsGeneral {
+  id              Int                @id @default(autoincrement())
+  pageTitle       String
+  metaTitle       String?
+  logoMediaId     Int?
+  logoMedia       Media?             @relation("DashboardGeneralLogoMedia", fields: [logoMediaId], references: [id]) // Logo image
+  faviconMediaId  Int?
+  faviconMedia    Media?             @relation("DashboardGeneralFaviconMedia", fields: [faviconMediaId], references: [id]) // Favicon image
+  settings        DashboardSettings?
+}

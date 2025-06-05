@@ -1,0 +1,9 @@
+// Main content model for the dashboard
+model DashboardContent {
+  id           Int      @id @default(autoincrement())
+  applications DashboardContentApplication[]
+  categories   DashboardContentCategory[]
+  sections     DashboardContentSection[]
+  elements     DashboardContentElement[]
+  dashboard    Dashboard?
+}

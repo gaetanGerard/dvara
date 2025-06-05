@@ -1,0 +1,6 @@
+// Layout settings model for the dashboard
+model DashboardSettingsLayout {
+  id        Int    @id @default(autoincrement())
+  layouts   Json   // Array of layouts (name, breakpoint, columns)
+  settings  DashboardSettings?
+}

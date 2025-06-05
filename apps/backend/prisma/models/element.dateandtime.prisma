@@ -1,0 +1,14 @@
+// Date and time widget model
+model ElementDateAndTime {
+  id              Int    @id @default(autoincrement())
+  customCityName  Boolean @default(false)
+  title           String?
+  format          Boolean
+  displaySeconds  Boolean
+  fixedTimeZone   Boolean @default(false)
+  timeZone        String  @default("Europe/Brussels")
+  displayDate     Boolean @default(true)
+  dateFormat      String?
+  elementId       Int    @unique
+  element         DashboardContentElement @relation(fields: [elementId], references: [id])
+}

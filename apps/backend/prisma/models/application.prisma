@@ -1,0 +1,12 @@
+// Application model representing an application with its details and associated media.
+model Application {
+  id              Int     @id @default(autoincrement())
+  name            String
+  iconMediaId     Int
+  iconMedia       Media   @relation("ApplicationIconMedia", fields: [iconMediaId], references: [id])
+  description     String?
+  url             String?
+  displayPingUrl  Boolean @default(false)
+  pingUrl         String?
+  applications     DashboardContentApplication[] @relation("applications")
+}

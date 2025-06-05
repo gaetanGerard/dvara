@@ -1,0 +1,16 @@
+// Main settings model for the dashboard
+model DashboardSettings {
+  id            Int      @id @default(autoincrement())
+  generalId     Int   @unique
+  general       DashboardSettingsGeneral @relation(fields: [generalId], references: [id])
+  layoutId      Int   @unique
+  layout        DashboardSettingsLayout  @relation(fields: [layoutId], references: [id])
+  backgroundId  Int   @unique
+  background    DashboardSettingsBackground @relation(fields: [backgroundId], references: [id])
+  appearanceId  Int   @unique
+  appearance    DashboardSettingsAppearance @relation(fields: [appearanceId], references: [id])
+  customCss     String?
+  dashboard      Dashboard?
+  accessId     Int? @unique
+  access       DashboardSettingsAccess? @relation(fields: [accessId], references: [id])
+}

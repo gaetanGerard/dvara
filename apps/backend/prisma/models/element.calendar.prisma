@@ -1,0 +1,7 @@
+// Calendar widget model
+model ElementCalendar {
+  id        Int    @id @default(autoincrement())
+  title     String
+  elementId Int    @unique
+  element   DashboardContentElement @relation(fields: [elementId], references: [id])
+}

@@ -1,0 +1,14 @@
+// Dashboard element content model
+model DashboardContentElement {
+  id             Int    @id @default(autoincrement())
+  applicationId  Int?
+  application    DashboardContentApplication? @relation("ApplicationElements", fields: [applicationId], references: [id])
+  size           String?
+  content        DashboardContent? @relation(fields: [contentId], references: [id])
+  contentId      Int?
+  dateAndTime    ElementDateAndTime?
+  calendar       ElementCalendar?
+  notepad        ElementNotepad?
+  position        String? // JSON or string to store the element's position
+  layoutData      String? // JSON to store custom layout information (optional)
+}

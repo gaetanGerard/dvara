@@ -1,0 +1,12 @@
+// Dashboard category content model
+model DashboardContentCategory {
+  id        Int    @id @default(autoincrement())
+  name      String
+  order     Int
+  size      String?
+  content   DashboardContent? @relation(fields: [contentId], references: [id])
+  contentId Int?
+  applications DashboardContentApplication[] @relation("CategoryApplications")
+  position    String? // JSON or string to store the category's position
+  layoutData  String? // JSON to store custom layout information (optional)
+}

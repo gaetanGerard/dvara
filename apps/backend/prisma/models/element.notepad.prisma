@@ -1,0 +1,7 @@
+// Notepad widget model
+model ElementNotepad {
+  id        Int    @id @default(autoincrement())
+  title     String
+  elementId Int    @unique
+  element   DashboardContentElement @relation(fields: [elementId], references: [id])
+}

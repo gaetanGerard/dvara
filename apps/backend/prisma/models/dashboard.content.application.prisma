@@ -1,0 +1,13 @@
+model DashboardContentApplication {
+  id             Int    @id @default(autoincrement())
+  applicationId  Int
+  application    Application @relation("applications", fields: [applicationId], references: [id])
+  order          Int
+  size           String?
+  content        DashboardContent? @relation(fields: [contentId], references: [id])
+  contentId      Int?
+  categories     DashboardContentCategory[] @relation("CategoryApplications")
+  elements       DashboardContentElement[] @relation("ApplicationElements")
+  position        String? // JSON or string to store the application's position on the dashboard
+  layoutData      String? // JSON to store custom layout information (optional)
+}

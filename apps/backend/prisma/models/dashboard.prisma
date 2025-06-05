@@ -1,0 +1,15 @@
+// Main dashboard entry model
+// This model represents the main dashboard entry, linking settings and content.
+model Dashboard {
+  id         Int      @id @default(autoincrement())
+  name       String
+  public     Boolean  @default(false)
+  ownerId    Int
+  owner      User     @relation("UserDashboards", fields: [ownerId], references: [id])
+  settingsId Int  @unique
+  settings   DashboardSettings @relation(fields: [settingsId], references: [id])
+  contentId  Int  @unique
+  content    DashboardContent  @relation(fields: [contentId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

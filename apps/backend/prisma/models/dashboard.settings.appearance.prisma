@@ -1,0 +1,17 @@
+// Appearance settings model for the dashboard
+enum BorderRadius {
+  XS
+  SM
+  M
+  L
+  XL
+}
+model DashboardSettingsAppearance {
+  id             Int    @id @default(autoincrement())
+  mainColor      String
+  secondaryColor String
+  transparent    Float  @default(1)
+  iconColor      String
+  borderRadius   BorderRadius
+  settings       DashboardSettings?
+}

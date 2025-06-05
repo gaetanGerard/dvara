@@ -1,0 +1,9 @@
+// Group access model for dashboard permissions
+model DashboardSettingsAccessGroup {
+  id         Int      @id @default(autoincrement())
+  groupId    Int
+  group      Group    @relation(fields: [groupId], references: [id])
+  permission DashboardAccessPermission
+  accessId   Int
+  access     DashboardSettingsAccess @relation(fields: [accessId], references: [id])
+}
