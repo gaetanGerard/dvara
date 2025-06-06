@@ -9,6 +9,7 @@ import { MediaModule } from './modules/media/media.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [CommonModule, UsersModule, AuthModule, GroupModule, MediaModule, ApplicationModule, DashboardModule, SettingsModule],

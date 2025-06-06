@@ -1,0 +1,11 @@
+// Prisma model for global site settings
+enum ThemeType {
+  light
+  dark
+}
+
+model Settings {
+  id      Int       @id @default(autoincrement())
+  theme   ThemeType
+  title   String
+}
