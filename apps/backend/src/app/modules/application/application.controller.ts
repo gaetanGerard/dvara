@@ -1,4 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/**
+ * ApplicationController exposes all API endpoints related to application management.
+ * - Handles creation, retrieval, update, and deletion of applications.
+ * - Secures endpoints with JWT authentication.
+ *
+ * Main endpoints:
+ *   - POST /application: Create a new application
+ *   - GET /application: List all applications
+ *   - GET /application/:id: Get a specific application by ID
+ *   - PATCH /application/:id: Update an application
+ *   - DELETE /application/:id: Delete an application and its media if unused
+ *   - PATCH /application/:id/media: Manage application icon (upload, associate, dissociate)
+ *
+ * All errors are handled with explicit exceptions for robust API behavior.
+ */
 import {
   Controller,
   Get,

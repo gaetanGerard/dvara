@@ -1,3 +1,18 @@
+/**
+ * ApplicationService contains all business logic for managing applications.
+ * - Handles creation, update, retrieval, and deletion of applications.
+ * - Manages application icon media (upload, association, deletion).
+ *
+ * Main methods:
+ *   - create: Create a new application (icon required)
+ *   - findAll: List all applications with their icons
+ *   - findOne: Get a specific application by ID
+ *   - update: Update application data (icon required)
+ *   - remove: Delete application and its icon if unused
+ *   - setApplicationMedia: Manage application icon (upload, associate, dissociate)
+ *
+ * Throws BadRequestException for invalid operations or missing data.
+ */
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';

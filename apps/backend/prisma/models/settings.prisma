@@ -8,4 +8,10 @@ model Settings {
   id      Int       @id @default(autoincrement())
   theme   ThemeType
   title   String
+  main_color String
+  secondary_color String
+  logo String
+  description String?
+  logo_alt String
+  logo_name String
 }
