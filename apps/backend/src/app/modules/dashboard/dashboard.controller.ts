@@ -25,7 +25,7 @@ export class DashboardController {
     @Body() createDashboardDto: CreateDashboardDto,
     @Req() req: any,
   ) {
-    // Utilise id ou sub selon le JWT
+    // check if user is authenticated and has a valid id
     const userId = req.user?.id ?? req.user?.sub;
     if (!userId || isNaN(Number(userId))) {
       throw new BadRequestException(
