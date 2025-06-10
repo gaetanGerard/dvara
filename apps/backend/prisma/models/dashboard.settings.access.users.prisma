@@ -3,6 +3,8 @@ enum DashboardAccessPermission {
   VIEW
   EDIT
   FULL_ACCESS
+  OWNER
+  SUPER_ADMIN
 }
 
 model DashboardSettingsAccessUser {

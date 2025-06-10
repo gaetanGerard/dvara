@@ -7,6 +7,6 @@ model DashboardContentCategory {
   content   DashboardContent? @relation(fields: [contentId], references: [id])
   contentId Int?
   applications DashboardContentApplication[] @relation("CategoryApplications")
-  position    String? // JSON or string to store the category's position
-  layoutData  String? // JSON to store custom layout information (optional)
+  position    Json? // JSON to store the category's position
+  layoutData  Json? // JSON to store custom layout information (optional)
 }
