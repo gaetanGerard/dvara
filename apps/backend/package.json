@@ -18,6 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:all": "jest --config ./test/jest-e2e.json --runInBand",
+    "test:user": "jest --config ./test/jest-e2e.json --runInBand ./test/users.e2e-spec.ts",
+    "test:auth": "jest --config ./test/jest-e2e.json --runInBand ./test/auth.e2e-spec.ts",
+    "test:settings": "jest --config ./test/jest-e2e.json --runInBand ./test/settings.e2e-spec.ts",
+    "test:media": "jest --config ./test/jest-e2e.json --runInBand ./test/media.e2e-spec.ts",
+    "test:app": "jest --config ./test/jest-e2e.json --runInBand ./test/app.e2e-spec.ts",
     "seed": "ts-node prisma/seed/index.seed.ts"
   },
   "prisma": {
