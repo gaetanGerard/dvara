@@ -74,8 +74,15 @@ export class MediaService {
     return media as Media;
   }
 
-  update(id: number, updateMediaDto: UpdateMediaDto) {
-    return `This action updates a #${id} media`;
+  async update(id: number, updateMediaDto: UpdateMediaDto): Promise<Media> {
+    const media = await this.prisma.media.findUnique({ where: { id } });
+    if (!media) {
+      throw new BadRequestException('Media not found');
+    }
+    return this.prisma.media.update({
+      where: { id },
+      data: updateMediaDto,
+    }) as Promise<Media>;
   }
 
   async remove(id: number) {
