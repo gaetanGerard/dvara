@@ -20,6 +20,8 @@ import { UpdateDashboardElementDto } from './dto/update-dashboard-element.dto';
 import { UpdateDashboardApplicationDto } from './dto/update-dashboard-application.dto';
 import { UpdateDashboardCategoryDto } from './dto/update-dashboard-category.dto';
 import { UpdateDashboardSectionDto } from './dto/update-dashboard-section.dto';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard)
@@ -33,6 +35,8 @@ export class DashboardController {
    * @returns The created dashboard with all settings and content
    */
   @Post()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canAdd' })
   async create(
     @Body() createDashboardDto: CreateDashboardDto,
     @Req() req: any,
@@ -53,6 +57,8 @@ export class DashboardController {
    * @returns Array of dashboards
    */
   @Get()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canView' })
   findAll() {
     return this.dashboardService.findAll();
   }
@@ -63,6 +69,8 @@ export class DashboardController {
    * @returns Array of dashboards
    */
   @Get('my')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canView' })
   async findMyDashboards(@Req() req: any) {
     const userId = req.user?.id ?? req.user?.sub;
     const groupIds = req.user?.groupIds || [];
@@ -76,6 +84,8 @@ export class DashboardController {
    * @returns Dashboard object or null if not found
    */
   @Get(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canView' })
   findOne(@Param('id') id: string) {
     return this.dashboardService.findOne(+id);
   }
@@ -88,6 +98,8 @@ export class DashboardController {
    * @returns The updated dashboard
    */
   @Patch(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canEdit' })
   update(
     @Param('id') id: string,
     @Body() updateDashboardDto: UpdateDashboardDto,
@@ -103,6 +115,8 @@ export class DashboardController {
    * @returns Success message
    */
   @Delete(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'dashboard', action: 'canDelete' })
   async remove(
     @Param('id') id: string,
     @Req() req: any,

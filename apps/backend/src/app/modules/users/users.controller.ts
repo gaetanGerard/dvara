@@ -46,6 +46,8 @@ import { Request } from 'express';
 import { Group } from '../../common/enums/group.enums';
 import { MediaService } from '../media/media.service';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 @Controller('users')
 export class UsersController {
@@ -84,7 +86,8 @@ export class UsersController {
   }
 
   // List all users (SUPER_ADMIN only)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'users', action: 'canView' })
   @Get()
   async findAll(@Req() req: Request & { user?: any }) {
     const user = req.user;
@@ -98,7 +101,8 @@ export class UsersController {
   }
 
   // Get a user by id (SUPER_ADMIN or self)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'users', action: 'canView' })
   @Get(':id')
   async findOne(@Req() req: Request & { user?: any }, @Param('id') id: string) {
     const user = req.user;
@@ -113,23 +117,27 @@ export class UsersController {
   }
 
   // Update own user data
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'users', action: 'canEdit' })
   @Patch(':id')
-  update(
+  async update(
     @Req() req: Request & { user?: any },
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const user = req.user;
     const userId = parseInt(id, 10);
-    if (user?.sub !== userId) {
+    // Autoriser super_admin à modifier n'importe qui, sinon seulement soi-même
+    const superAdminGroupId = await this.getSuperAdminGroupId();
+    if (!user?.groupIds?.includes(superAdminGroupId) && user?.sub !== userId) {
       throw new ForbiddenException('You can only update your own account.');
     }
     return this.usersService.update(userId, updateUserDto);
   }
 
-  // Delete a user (SUPER_ADMIN or self, with last SUPER_ADMIN protection)
-  @UseGuards(JwtAuthGuard)
+  // Delete a user (SUPER_ADMIN ou self, avec protection dernier super_admin)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'users', action: 'canDelete' })
   @Delete(':id')
   async remove(@Req() req: Request & { user?: any }, @Param('id') id: string) {
     const user = req.user;
@@ -156,6 +164,7 @@ export class UsersController {
         );
       }
     }
+    // Autoriser super_admin à supprimer n'importe qui, sinon seulement soi-même
     if (!user?.groupIds?.includes(superAdminGroupId) && user?.sub !== userId) {
       throw new ForbiddenException('You can only delete your own account.');
     }
@@ -177,7 +186,7 @@ export class UsersController {
     return this.usersService.changePassword(id, dto);
   }
 
-  // Request password reset (SUPER_ADMIN or self)
+  // Request password reset (SUPER_ADMIN ou self)
   @UseGuards(JwtAuthGuard)
   @Patch(':id/reset-password')
   async resetPassword(

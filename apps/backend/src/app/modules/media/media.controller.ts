@@ -19,6 +19,8 @@ import { Media } from './entities/media.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { parsePaginationParams } from '../../common/utils/pagination.util';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 /**
  * MediaController exposes all media-related API endpoints.
@@ -51,6 +53,8 @@ export class MediaController {
    * Create a media entry (URL only, no upload)
    */
   @Post()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canAdd' })
   async create(@Body() createMediaDto: CreateMediaDto): Promise<Media> {
     return this.mediaService.create(createMediaDto);
   }
@@ -60,6 +64,8 @@ export class MediaController {
    * GET /media?page=1&limit=10 (default: page=1, limit=20)
    */
   @Get()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canView' })
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -75,16 +81,22 @@ export class MediaController {
    * Returns a media by id
    */
   @Get(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canView' })
   async findOne(@Param('id') id: string): Promise<Media> {
     return await this.mediaService.findOne(+id);
   }
 
   @Patch(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canEdit' })
   update(@Param('id') id: string, @Body() updateMediaDto: UpdateMediaDto) {
     return this.mediaService.update(+id, updateMediaDto);
   }
 
   @Delete(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canDelete' })
   remove(@Param('id') id: string) {
     return this.mediaService.remove(+id);
   }
@@ -93,6 +105,8 @@ export class MediaController {
    * Upload an image file and create a media entry (local storage)
    */
   @Post('upload')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'media', action: 'canUpload' })
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @UploadedFile() file: any,

@@ -28,6 +28,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
 import * as path from 'path';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('settings')
@@ -35,18 +37,24 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'settings', action: 'canView' })
   async findAll(@Req() req: any) {
     this.checkSuperAdmin(req.user);
     return this.settingsService.findAll();
   }
 
   @Patch()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'settings', action: 'canEdit' })
   async update(@Req() req: any, @Body() updateSettingDto: UpdateSettingDto) {
     this.checkSuperAdmin(req.user);
     return this.settingsService.update(updateSettingDto);
   }
 
   @Patch('logo/upload')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'settings', action: 'canEdit' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadLogo(
     @Req() req: any,

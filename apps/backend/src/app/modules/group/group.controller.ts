@@ -32,13 +32,16 @@ import {
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 @Controller('group')
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
   // Create a new group
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'group', action: 'canAdd' })
   @Post()
   async create(@Req() req, @Body() createGroupDto: CreateGroupDto) {
     const user = req.user;
@@ -47,7 +50,8 @@ export class GroupController {
   }
 
   // List all groups accessible to the user
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'group', action: 'canView' })
   @Get()
   async findAll(@Req() req) {
     const user = req.user;
@@ -55,7 +59,8 @@ export class GroupController {
   }
 
   // Get details of a group by id
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'group', action: 'canView' })
   @Get(':id')
   async findOne(@Req() req, @Param('id') id: string) {
     const user = req.user;
@@ -63,7 +68,8 @@ export class GroupController {
   }
 
   // Update a group
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'group', action: 'canEdit' })
   @Patch(':id')
   async update(
     @Req() req,
@@ -81,7 +87,8 @@ export class GroupController {
   }
 
   // Delete a group
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission({ resource: 'group', action: 'canDelete' })
   @Delete(':id')
   async remove(@Req() req, @Param('id') id: string) {
     const user = req.user;

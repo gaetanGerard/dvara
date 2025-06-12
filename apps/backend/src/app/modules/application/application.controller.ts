@@ -33,6 +33,8 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { RequirePermission } from '../../common/shared/require-permission.decorator';
+import { PermissionGuard } from '../../common/shared/permission.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('application')
@@ -40,21 +42,29 @@ export class ApplicationController {
   constructor(private readonly applicationService: ApplicationService) {}
 
   @Post()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canAdd' })
   create(@Body() createApplicationDto: CreateApplicationDto) {
     return this.applicationService.create(createApplicationDto);
   }
 
   @Get()
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canView' })
   findAll() {
     return this.applicationService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canView' })
   findOne(@Param('id') id: string) {
     return this.applicationService.findOne(+id);
   }
 
   @Patch(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canEdit' })
   update(
     @Param('id') id: string,
     @Body() updateApplicationDto: UpdateApplicationDto,
@@ -63,11 +73,15 @@ export class ApplicationController {
   }
 
   @Delete(':id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canDelete' })
   remove(@Param('id') id: string) {
     return this.applicationService.remove(+id);
   }
 
   @Patch(':id/media')
+  @UseGuards(PermissionGuard)
+  @RequirePermission({ resource: 'application', action: 'canEdit' })
   @UseInterceptors(FileInterceptor('file'))
   async setApplicationMedia(
     @Param('id') id: string,
