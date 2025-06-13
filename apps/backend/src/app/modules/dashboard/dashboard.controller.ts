@@ -16,10 +16,7 @@ import { DashboardService } from './dashboard.service';
 import { CreateDashboardDto } from './dto/create-dashboard.dto';
 import { UpdateDashboardDto } from './dto/update-dashboard.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UpdateDashboardElementDto } from './dto/update-dashboard-element.dto';
 import { UpdateDashboardApplicationDto } from './dto/update-dashboard-application.dto';
-import { UpdateDashboardCategoryDto } from './dto/update-dashboard-category.dto';
-import { UpdateDashboardSectionDto } from './dto/update-dashboard-section.dto';
 import { RequirePermission } from '../../common/shared/require-permission.decorator';
 import { PermissionGuard } from '../../common/shared/permission.guard';
 
@@ -81,18 +78,19 @@ export class DashboardController {
    * Get a dashboard by its ID.
    * @route GET /dashboard/:id
    * @param id Dashboard ID (route param)
-   * @returns Dashboard object or null if not found
+   * @returns Dashboard object ou ForbiddenException
    */
   @Get(':id')
   @UseGuards(PermissionGuard)
   @RequirePermission({ resource: 'dashboard', action: 'canView' })
-  findOne(@Param('id') id: string) {
-    return this.dashboardService.findOne(+id);
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.dashboardService.findOne(+id, req.user);
   }
 
   /**
    * Update a dashboard's main fields (name, public, pageTitle).
    * @route PATCH /dashboard/:id
+   * @param id Dashboard ID (route param)
    * @param id Dashboard ID (route param)
    * @body updateDashboardDto Fields to update
    * @returns The updated dashboard
@@ -103,8 +101,9 @@ export class DashboardController {
   update(
     @Param('id') id: string,
     @Body() updateDashboardDto: UpdateDashboardDto,
+    @Req() req: any,
   ) {
-    return this.dashboardService.update(+id, updateDashboardDto);
+    return this.dashboardService.update(+id, updateDashboardDto, req.user);
   }
 
   /**
@@ -131,23 +130,14 @@ export class DashboardController {
   /**
    * Add an application placeholder to the dashboard content.
    * @route POST /dashboard/:id/application
-   * @param id Dashboard ID (route param)
-   * @body dto Application data (applicationId, order, size, ...)
-   * @returns The created DashboardContentApplication
    */
   @Post(':id/application')
   async addApplication(
     @Param('id') id: string,
-    @Body()
-    dto: {
-      applicationId?: number;
-      order?: number;
-      size?: string;
-      position?: string;
-      layoutData?: string;
-    },
+    @Body() dto: any,
+    @Req() req: any,
   ) {
-    return this.dashboardService.addApplication(Number(id), dto);
+    return this.dashboardService.addApplication(Number(id), dto, req.user);
   }
 
   /**
@@ -164,6 +154,7 @@ export class DashboardController {
     @Param('contentAppId') contentAppId: string,
     @Body() dto: { applicationId: number },
   ) {
+    // New signature: dashboardService.linkApplication(Number(id), Number(contentAppId), dto.applicationId)
     const result = await this.dashboardService.linkApplication(
       Number(id),
       Number(contentAppId),
@@ -200,9 +191,10 @@ export class DashboardController {
   @Post(':id/category')
   async addCategory(
     @Param('id') id: string,
-    @Body() dto: { name: string; order?: number },
+    @Body() dto: any,
+    @Req() req: any,
   ) {
-    return await this.dashboardService.addCategory(Number(id), dto);
+    return await this.dashboardService.addCategory(Number(id), dto, req.user);
   }
 
   /**
@@ -217,21 +209,20 @@ export class DashboardController {
   async updateCategory(
     @Param('id') id: string,
     @Param('categoryId') categoryId: string,
-    @Body() dto: UpdateDashboardCategoryDto,
+    @Body() dto: any,
+    @Req() req: any,
   ) {
     return await this.dashboardService.updateCategory(
       Number(id),
       Number(categoryId),
       dto,
+      req.user,
     );
   }
 
   /**
    * Delete a category from the dashboard.
    * @route DELETE /dashboard/:id/category/:categoryId
-   * @param id Dashboard ID (route param)
-   * @param categoryId Category ID (route param)
-   * @returns Success message
    */
   @Delete(':id/category/:categoryId')
   async removeCategory(
@@ -254,11 +245,13 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('categoryId') categoryId: string,
     @Body() dto: { applicationId: number },
+    @Req() req: any,
   ) {
     const app = await this.dashboardService.addApplicationToCategory(
       Number(id),
       Number(categoryId),
       dto.applicationId,
+      req.user,
     );
     return { success: true, data: app };
   }
@@ -276,11 +269,13 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('categoryId') categoryId: string,
     @Param('appId') appId: string,
+    @Req() req: any,
   ) {
     return await this.dashboardService.removeApplicationFromCategory(
       Number(id),
       Number(categoryId),
       Number(appId),
+      req.user,
     );
   }
 
@@ -298,13 +293,15 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('categoryId') categoryId: string,
     @Param('appId') appId: string,
-    @Body() dto: UpdateDashboardApplicationDto,
+    @Body() dto: any,
+    @Req() req: any,
   ) {
     const result = await this.dashboardService.updateCategoryApplication(
       Number(id),
       Number(categoryId),
       Number(appId),
       dto,
+      req.user,
     );
     return { success: true, data: result };
   }
@@ -317,11 +314,8 @@ export class DashboardController {
    * @returns The created section
    */
   @Post(':id/section')
-  async addSection(
-    @Param('id') id: string,
-    @Body() dto: { name: string; order?: number },
-  ) {
-    return await this.dashboardService.addSection(Number(id), dto);
+  async addSection(@Param('id') id: string, @Body() dto: any, @Req() req: any) {
+    return await this.dashboardService.addSection(Number(id), dto, req.user);
   }
 
   /**
@@ -336,21 +330,20 @@ export class DashboardController {
   async updateSection(
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
-    @Body() dto: UpdateDashboardSectionDto,
+    @Body() dto: any,
+    @Req() req: any,
   ) {
     return await this.dashboardService.updateSection(
       Number(id),
       Number(sectionId),
       dto,
+      req.user,
     );
   }
 
   /**
    * Delete a section from the dashboard.
    * @route DELETE /dashboard/:id/section/:sectionId
-   * @param id Dashboard ID (route param)
-   * @param sectionId Section ID (route param)
-   * @returns Success message
    */
   @Delete(':id/section/:sectionId')
   async removeSection(
@@ -374,13 +367,15 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
     @Param('appId') appId: string,
-    @Body() dto: UpdateDashboardApplicationDto,
+    @Body() dto: any,
+    @Req() req: any,
   ) {
     return await this.dashboardService.updateSectionApplication(
       Number(id),
       Number(sectionId),
       Number(appId),
       dto,
+      req.user,
     );
   }
 
@@ -397,11 +392,13 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
     @Body() dto: { applicationId: number },
+    @Req() req: any,
   ) {
     return await this.dashboardService.addApplicationToSection(
       Number(id),
       Number(sectionId),
       dto.applicationId,
+      req.user,
     );
   }
 
@@ -418,11 +415,13 @@ export class DashboardController {
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
     @Param('appId') appId: string,
+    @Req() req: any,
   ) {
     return await this.dashboardService.removeApplicationFromSection(
       Number(id),
       Number(sectionId),
       Number(appId),
+      req.user,
     );
   }
 
@@ -434,11 +433,8 @@ export class DashboardController {
    * @returns The created element
    */
   @Post(':id/element')
-  async addElement(
-    @Param('id') id: string,
-    @Body() dto: { type: string; data?: any; order?: number },
-  ) {
-    return await this.dashboardService.addElement(Number(id), dto);
+  async addElement(@Param('id') id: string, @Body() dto: any, @Req() req: any) {
+    return await this.dashboardService.addElement(Number(id), dto, req.user);
   }
 
   /**
@@ -453,12 +449,14 @@ export class DashboardController {
   async updateElement(
     @Param('id') id: string,
     @Param('elementId') elementId: string,
-    @Body() dto: UpdateDashboardElementDto,
+    @Body() dto: any,
+    @Req() req: any,
   ) {
     const result = await this.dashboardService.updateElement(
       Number(id),
       Number(elementId),
       dto,
+      req.user,
     );
     if (!result) throw new BadRequestException('Element update failed');
     return result;
@@ -496,8 +494,9 @@ export class DashboardController {
       logoMediaId?: number;
       faviconMediaId?: number;
     },
+    @Req() req: any,
   ) {
-    return await this.dashboardService.updateGeneral(Number(id), dto);
+    return await this.dashboardService.updateGeneral(Number(id), dto, req.user);
   }
 
   /**

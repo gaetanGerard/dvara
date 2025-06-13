@@ -62,7 +62,7 @@ export class DashboardService {
   /**
    * Handle NotFoundException for a specific entity
    */
-  private handleNotFound(entity: string = 'Ressource') {
+  private handleNotFound(entity: string = 'Resource') {
     throw new NotFoundException(`${entity} not found`);
   }
 
@@ -279,15 +279,22 @@ export class DashboardService {
   /**
    * Get a dashboard by its ID with full details (owner, settings, content, access).
    * @param id Dashboard ID
-   * @returns Dashboard object or null if not found
+   * @param user Utilisateur courant (pour contrôle d'accès)
+   * @returns Dashboard object ou ForbiddenException
    */
-  async findOne(id: number) {
-    // Return a dashboard per id with owner filtered, settings, content and access
+  async findOne(id: number, user?: any) {
+    // Récupère le dashboard avec tous les détails
     const dashboard = await this.prisma.dashboard.findUnique({
       where: { id },
       include: DASHBOARD_FULL_INCLUDE,
     });
-    if (dashboard?.settings?.layout?.layouts) {
+    if (!dashboard) this.handleNotFound('Dashboard');
+    if (
+      dashboard &&
+      dashboard.settings &&
+      dashboard.settings.layout &&
+      dashboard.settings.layout.layouts
+    ) {
       if (typeof dashboard.settings.layout.layouts === 'string') {
         try {
           dashboard.settings.layout.layouts = JSON.parse(
@@ -307,6 +314,56 @@ export class DashboardService {
         dashboard.settings.layout.layouts = null;
       }
     }
+    // Strict access control
+    if (user && dashboard) {
+      const userId = user.id ?? user.sub;
+      const userGroupIds: number[] = user.groupIds || [];
+      const isOwner = dashboard.owner && dashboard.owner.id === userId;
+      // Check SUPER_ADMIN via group
+      let isSuperAdmin = false;
+      if (userGroupIds.length) {
+        const superAdminGroup = await this.prisma.group.findUnique({
+          where: { name: 'SUPER_ADMIN' },
+          select: { id: true },
+        });
+        if (superAdminGroup && userGroupIds.includes(superAdminGroup.id)) {
+          isSuperAdmin = true;
+        }
+      }
+      // Check explicit access (VIEW, EDIT, FULL_ACCESS)
+      let hasAccess = false;
+      if (dashboard.settings && dashboard.settings.access) {
+        if (
+          Array.isArray(dashboard.settings.access.users) &&
+          dashboard.settings.access.users.some(
+            (u: any) =>
+              u.userId === userId &&
+              ['VIEW', 'EDIT', 'FULL_ACCESS', 'OWNER'].includes(
+                String(u.permission),
+              ),
+          )
+        ) {
+          hasAccess = true;
+        }
+        if (
+          Array.isArray(dashboard.settings.access.groups) &&
+          dashboard.settings.access.groups.some(
+            (g: any) =>
+              userGroupIds.includes(Number(g.groupId)) &&
+              ['VIEW', 'EDIT', 'FULL_ACCESS', 'OWNER', 'SUPER_ADMIN'].includes(
+                String(g.permission),
+              ),
+          )
+        ) {
+          hasAccess = true;
+        }
+      }
+      if (!isOwner && !isSuperAdmin && !hasAccess) {
+        throw new ForbiddenException(
+          'You do not have access to this dashboard.',
+        );
+      }
+    }
     return dashboard;
   }
 
@@ -314,24 +371,74 @@ export class DashboardService {
    * Update a dashboard's main fields (name, public, pageTitle).
    * @param id Dashboard ID
    * @param updateDashboardDto Fields to update
+   * @param user Utilisateur courant (pour contrôle d'accès)
    * @returns The updated dashboard
    */
-  async update(id: number, updateDashboardDto: UpdateDashboardDto) {
+  async update(id: number, updateDashboardDto: UpdateDashboardDto, user?: any) {
+    // Strict access control
+    const dashboard = await this.findOne(id, user);
+    if (!dashboard) this.handleNotFound('Dashboard');
+    // Only OWNER, SUPER_ADMIN, EDIT or FULL_ACCESS can edit
+    if (user && dashboard) {
+      const userId = user.id ?? user.sub;
+      const userGroupIds: number[] = user.groupIds || [];
+      const isOwner = dashboard.owner && dashboard.owner.id === userId;
+      let isSuperAdmin = false;
+      if (userGroupIds.length) {
+        const superAdminGroup = await this.prisma.group.findUnique({
+          where: { name: 'SUPER_ADMIN' },
+          select: { id: true },
+        });
+        if (superAdminGroup && userGroupIds.includes(superAdminGroup.id)) {
+          isSuperAdmin = true;
+        }
+      }
+      let hasEdit = false;
+      if (dashboard.settings && dashboard.settings.access) {
+        if (
+          Array.isArray(dashboard.settings.access.users) &&
+          dashboard.settings.access.users.some(
+            (u: any) =>
+              u.userId === userId &&
+              ['EDIT', 'FULL_ACCESS', 'OWNER'].includes(String(u.permission)),
+          )
+        ) {
+          hasEdit = true;
+        }
+        if (
+          Array.isArray(dashboard.settings.access.groups) &&
+          dashboard.settings.access.groups.some(
+            (g: any) =>
+              userGroupIds.includes(Number(g.groupId)) &&
+              ['EDIT', 'FULL_ACCESS', 'OWNER', 'SUPER_ADMIN'].includes(
+                String(g.permission),
+              ),
+          )
+        ) {
+          hasEdit = true;
+        }
+      }
+      if (!isOwner && !isSuperAdmin && !hasEdit) {
+        throw new ForbiddenException(
+          'You do not have the right to edit this dashboard.',
+        );
+      }
+    }
     // Update simple fields: name, public
     const { name, public: isPublic, ...rest } = updateDashboardDto;
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (isPublic !== undefined) data.public = isPublic;
     // Update dashboard main fields
-    const dashboard = await this.prisma.dashboard.update({
+    const updated = await this.prisma.dashboard.update({
       where: { id },
       data,
       include: DASHBOARD_FULL_INCLUDE,
     });
-    // Optionaly, update settings.general if pageTitle is provided
+    // Optionally, update settings.general if pageTitle is provided
     if (updateDashboardDto.pageTitle) {
       await this.prisma.dashboardSettingsGeneral.update({
-        where: { id: dashboard.settings.general.id },
+        where: { id: updated.settings.general.id },
         data: { pageTitle: updateDashboardDto.pageTitle },
       });
       // Refresh dashboard with updated settings
@@ -340,7 +447,7 @@ export class DashboardService {
         include: DASHBOARD_FULL_INCLUDE,
       });
     }
-    return dashboard;
+    return updated;
   }
 
   /**
@@ -358,7 +465,9 @@ export class DashboardService {
       position?: string;
       layoutData?: any;
     },
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     const contentId = await this.getDashboardContentId(dashboardId);
     // DashboardContentApplication have an 'order' field, we keep it here
     const contentApp = await this.prisma.dashboardContentApplication.create({
@@ -567,7 +676,7 @@ export class DashboardService {
     }
     if (!dashboard || content.contentId !== dashboard.contentId) {
       throw new ForbiddenException(
-        `Cette ${type} n'appartient pas au dashboard`,
+        `This ${type} does not belong to the dashboard`,
       );
     }
   }
@@ -609,7 +718,9 @@ export class DashboardService {
     dashboardId: number,
     categoryId: number,
     applicationId: number,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('category', categoryId, dashboardId);
     const contentId = await this.getDashboardContentId(dashboardId);
     const app = await this.prisma.dashboardContentApplication.create({
@@ -633,7 +744,9 @@ export class DashboardService {
     dashboardId: number,
     categoryId: number,
     appId: number,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('category', categoryId, dashboardId);
     await this.prisma.dashboardContentCategory.update({
       where: { id: categoryId },
@@ -655,7 +768,9 @@ export class DashboardService {
     categoryId: number,
     appId: number,
     dto: UpdateDashboardApplicationDto,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('category', categoryId, dashboardId);
     await this.prisma.dashboardContentCategory.findFirstOrThrow({
       where: { id: categoryId, applications: { some: { id: appId } } },
@@ -677,7 +792,9 @@ export class DashboardService {
     dashboardId: number,
     sectionId: number,
     applicationId: number,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('section', sectionId, dashboardId);
     const contentId = await this.getDashboardContentId(dashboardId);
     const app = await this.prisma.dashboardContentApplication.create({
@@ -701,7 +818,9 @@ export class DashboardService {
     dashboardId: number,
     sectionId: number,
     appId: number,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('section', sectionId, dashboardId);
     await this.prisma.dashboardContentSection.update({
       where: { id: sectionId },
@@ -723,7 +842,9 @@ export class DashboardService {
     sectionId: number,
     appId: number,
     dto: UpdateDashboardApplicationDto,
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('section', sectionId, dashboardId);
     await this.prisma.dashboardContentSection.findFirstOrThrow({
       where: { id: sectionId, applications: { some: { id: appId } } },
@@ -748,11 +869,49 @@ export class DashboardService {
       logoMediaId?: number;
       faviconMediaId?: number;
     },
+    user?: any,
   ) {
     const dashboard = await this.findOne(dashboardId);
     if (!dashboard || !dashboard.settings || !dashboard.settings.general) {
       this.handleNotFound('Dashboard');
       return;
+    }
+    // Vérification des permissions : OWNER, SUPER_ADMIN, FULL_ACCESS
+    const userId = user?.id ?? user?.sub;
+    const userGroupIds: number[] = user?.groupIds || [];
+    const isOwner = dashboard.owner?.id === userId;
+    // Vérifie SUPER_ADMIN via groupe
+    const superAdminGroup = await this.prisma.group.findUnique({
+      where: { name: 'SUPER_ADMIN' },
+      select: { id: true },
+    });
+    const isSuperAdmin = !!(
+      superAdminGroup && userGroupIds.includes(superAdminGroup.id)
+    );
+    // Vérifie FULL_ACCESS dans les accès users/groups
+    let hasFullAccess = false;
+    if (dashboard.settings?.access) {
+      if (
+        dashboard.settings.access.users?.some(
+          (u: any) => u.userId === userId && u.permission === 'FULL_ACCESS',
+        )
+      ) {
+        hasFullAccess = true;
+      }
+      if (
+        dashboard.settings.access.groups?.some(
+          (g: any) =>
+            userGroupIds.includes(Number(g.groupId)) &&
+            g.permission === 'FULL_ACCESS',
+        )
+      ) {
+        hasFullAccess = true;
+      }
+    }
+    if (!isOwner && !isSuperAdmin && !hasFullAccess) {
+      throw new ForbiddenException(
+        'You do not have permission to update general settings of this dashboard.',
+      );
     }
     await this.prisma.dashboardSettingsGeneral.update({
       where: { id: dashboard.settings.general.id },
@@ -808,6 +967,22 @@ export class DashboardService {
       this.handleNotFound('Dashboard');
       return;
     }
+    // Strict control: only OWNER or SUPER_ADMIN can update access
+    const userId = user?.id ?? user?.sub;
+    const userGroupIds: number[] = user?.groupIds || [];
+    const isOwner = dashboard.owner?.id === userId;
+    const superAdminGroup = await this.prisma.group.findUnique({
+      where: { name: 'SUPER_ADMIN' },
+      select: { id: true },
+    });
+    const isSuperAdmin = !!(
+      superAdminGroup && userGroupIds.includes(superAdminGroup.id)
+    );
+    if (!isOwner && !isSuperAdmin) {
+      throw new ForbiddenException(
+        'Only the owner or a super_admin can update the access of this dashboard.',
+      );
+    }
     const accessId = dashboard.settings.access.id;
     if (dto.users) {
       await this.prisma.dashboardSettingsAccessUser.deleteMany({
@@ -833,10 +1008,7 @@ export class DashboardService {
         });
       }
     }
-    const superAdminGroup = await this.prisma.group.findUnique({
-      where: { name: 'SUPER_ADMIN' },
-      select: { id: true },
-    });
+    // Ensure SUPER_ADMIN group is always present
     if (superAdminGroup) {
       const already = await this.prisma.dashboardSettingsAccessGroup.findFirst({
         where: { accessId, groupId: superAdminGroup.id },
@@ -939,7 +1111,9 @@ export class DashboardService {
       position?: any;
       layoutData?: any;
     },
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     const contentId = await this.getDashboardContentId(dashboardId);
     const category = await this.prisma.dashboardContentCategory.create({
       data: {
@@ -961,7 +1135,13 @@ export class DashboardService {
    * @param dto Fields to update
    * @returns The updated category
    */
-  async updateCategory(dashboardId: number, categoryId: number, dto: any) {
+  async updateCategory(
+    dashboardId: number,
+    categoryId: number,
+    dto: any,
+    user: any,
+  ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('category', categoryId, dashboardId);
     return this.prisma.dashboardContentCategory.update({
       where: { id: categoryId },
@@ -984,7 +1164,9 @@ export class DashboardService {
       position?: any;
       layoutData?: any;
     },
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     const contentId = await this.getDashboardContentId(dashboardId);
     const section = await this.prisma.dashboardContentSection.create({
       data: {
@@ -1006,7 +1188,13 @@ export class DashboardService {
    * @param dto Fields to update
    * @returns The updated section
    */
-  async updateSection(dashboardId: number, sectionId: number, dto: any) {
+  async updateSection(
+    dashboardId: number,
+    sectionId: number,
+    dto: any,
+    user: any,
+  ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('section', sectionId, dashboardId);
     return this.prisma.dashboardContentSection.update({
       where: { id: sectionId },
@@ -1029,7 +1217,9 @@ export class DashboardService {
       position?: any;
       layoutData?: any;
     },
+    user: any,
   ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     const contentId = await this.getDashboardContentId(dashboardId);
     const element = await this.prisma.dashboardContentElement.create({
       data: {
@@ -1051,7 +1241,13 @@ export class DashboardService {
    * @param dto Fields to update
    * @returns The updated element
    */
-  async updateElement(dashboardId: number, elementId: number, dto: any) {
+  async updateElement(
+    dashboardId: number,
+    elementId: number,
+    dto: any,
+    user: any,
+  ) {
+    await this.assertCanEditDashboard(dashboardId, user);
     await this.assertBelongsToDashboard('element', elementId, dashboardId);
     return this.prisma.dashboardContentElement.update({
       where: { id: elementId },
@@ -1123,5 +1319,49 @@ export class DashboardService {
       data,
     });
     return this.findOne(dashboardId);
+  }
+
+  /**
+   * Check if the user has the right to edit the dashboard (OWNER, SUPER_ADMIN, EDIT, FULL_ACCESS)
+   */
+  private async assertCanEditDashboard(dashboardId: number, user: any) {
+    const dashboard = await this.findOne(dashboardId);
+    if (!dashboard) throw new NotFoundException('Dashboard not found');
+    const userId = user?.id ?? user?.sub;
+    const userGroupIds: number[] = user?.groupIds || [];
+    const isOwner = dashboard.owner?.id === userId;
+    const superAdminGroup = await this.prisma.group.findUnique({
+      where: { name: 'SUPER_ADMIN' },
+      select: { id: true },
+    });
+    const isSuperAdmin = !!(
+      superAdminGroup && userGroupIds.includes(Number(superAdminGroup.id))
+    );
+    let hasEdit = false;
+    if (dashboard.settings?.access) {
+      if (
+        dashboard.settings.access.users?.some(
+          (u: { userId: number; permission: string }) =>
+            u.userId === userId &&
+            ['EDIT', 'FULL_ACCESS'].includes(String(u.permission)),
+        )
+      ) {
+        hasEdit = true;
+      }
+      if (
+        dashboard.settings.access.groups?.some(
+          (g: { groupId: number; permission: string }) =>
+            userGroupIds.includes(Number(g.groupId)) &&
+            ['EDIT', 'FULL_ACCESS'].includes(String(g.permission)),
+        )
+      ) {
+        hasEdit = true;
+      }
+    }
+    if (!isOwner && !isSuperAdmin && !hasEdit) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this dashboard.',
+      );
+    }
   }
 }
