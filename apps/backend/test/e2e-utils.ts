@@ -32,4 +32,9 @@ export class E2EContext {
   getAuthHeaders(key: string) {
     return { Authorization: `Bearer ${this.tokens[key]}` };
   }
+
+  toJSON() {
+    // Empêche la sérialisation de l'instance (et donc de l'agent)
+    return {};
+  }
 }

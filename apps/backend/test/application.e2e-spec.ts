@@ -40,7 +40,6 @@ describe('Application Module (e2e)', () => {
         });
       } catch (err) {
         // Log l'erreur de cleanup application
-
         console.error('Cleanup application error:', err?.response?.data || err);
       }
     }
@@ -50,9 +49,11 @@ describe('Application Module (e2e)', () => {
           headers: ctx.getAuthHeaders('superAdmin'),
         });
       } catch (err) {
-        // Log l'erreur de cleanup media
-
-        console.error('Cleanup media error:', err?.response?.data || err);
+        const status = err?.response?.status;
+        if (![400, 404].includes(Number(status))) {
+          // Log seulement si ce n'est pas une erreur attendue (media déjà supprimé)
+          console.error('Cleanup media error:', err?.response?.data || err);
+        }
       }
     }
   });

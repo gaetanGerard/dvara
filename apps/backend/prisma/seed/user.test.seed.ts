@@ -1,10 +1,32 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-
 const prisma = new PrismaClient();
 
-async function main() {
+export async function seed() {
+  // Supprime d'abord les dashboards de test liés aux users
+  await prisma.dashboard.deleteMany({ where: { name: 'Dashboard Test 1' } });
+  // Supprime d'abord les sous-modèles enfants de dashboardSettingsAccess
+  await prisma.dashboardSettingsAccessUser.deleteMany({});
+  await prisma.dashboardSettingsAccessGroup.deleteMany({});
+  // Puis dashboardSettingsAccess
+  await prisma.dashboardSettingsAccess.deleteMany({});
+  // Puis les autres sous-modèles de settings
+  await prisma.dashboardSettingsGeneral.deleteMany({});
+  await prisma.dashboardSettingsBackground.deleteMany({});
+  await prisma.dashboardSettingsLayout.deleteMany({});
+  await prisma.dashboardSettingsAppearance.deleteMany({});
+  // Puis dashboardSettings (parent)
+  await prisma.dashboardSettings.deleteMany({});
+  // Puis dashboardContent
+  await prisma.dashboardContent.deleteMany({});
+  // Supprime les applications de test liées aux users
+  await prisma.application.deleteMany({
+    where: {
+      name: { in: ['App Test 1', 'App Test 2', 'App Test 3'] },
+    },
+  });
+  // Supprime les groupes de test liés aux users
+  await prisma.group.deleteMany({ where: { name: 'Test Group 1' } });
   // Clean all users and group relations before seeding
   await prisma.user.deleteMany({});
   await prisma.$executeRaw`DELETE FROM _UserGroups`;
@@ -71,10 +93,3 @@ async function main() {
     'Seeded 3 users: superadmin@dvara.local, user1@dvara.local, user2@dvara.local',
   );
 }
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
