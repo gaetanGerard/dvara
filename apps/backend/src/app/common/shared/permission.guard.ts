@@ -35,6 +35,15 @@ export class PermissionGuard implements CanActivate {
     if (!user) throw new ForbiddenException('User not authenticated');
     // Get SUPER_ADMIN group id
     const superAdminGroup = await getSuperAdminGroup(this.prisma);
+    // DEBUG LOG: super admin bypass
+    // console.log('[PERMISSION GUARD]', {
+    //   userGroupIds: user.groupIds,
+    //   superAdminGroupId: superAdminGroup?.id,
+    //   userSub: user.sub,
+    //   route: request.url,
+    //   method: request.method,
+    //   permission: opts,
+    // });
     if (superAdminGroup && user.groupIds?.includes(superAdminGroup.id)) {
       return true;
     }

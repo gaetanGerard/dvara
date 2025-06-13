@@ -7,3 +7,5 @@ generator client {
   provider = "prisma-client-js"
   previewFeatures = ["multiSchema"]
 }
+
+// Les modèles sont définis dans le dossier models/*.prisma et inclus automatiquement par Prisma.

@@ -31,6 +31,7 @@ export class PermissionService {
             appsPerm: true,
             dashPerm: true,
             mediaPerm: true,
+            groupPerm: true,
           },
         },
       },
@@ -47,6 +48,7 @@ export class PermissionService {
         if (resource === 'dashboard') permObj = perm.dashPerm;
         else if (resource === 'application') permObj = perm.appsPerm;
         else if (resource === 'media') permObj = perm.mediaPerm;
+        else if (resource === 'group') permObj = perm.groupPerm;
         if (permObj && permObj[action] === true) return true;
       }
     }

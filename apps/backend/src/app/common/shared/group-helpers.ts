@@ -164,11 +164,25 @@ export const groupUserSelect = {
 export const groupIncludeFull = {
   users: { select: groupUserSelect },
   admins: { select: groupUserSelect },
-  permissions: { include: { appsPerm: true, dashPerm: true, mediaPerm: true } },
+  permissions: {
+    include: {
+      appsPerm: true,
+      dashPerm: true,
+      mediaPerm: true,
+      groupPerm: true,
+    },
+  },
   settings: true,
 };
 export const groupIncludeAdminsPermsSettings = {
   admins: { select: groupUserSelect },
-  permissions: { include: { appsPerm: true, dashPerm: true, mediaPerm: true } },
+  permissions: {
+    include: {
+      appsPerm: true,
+      dashPerm: true,
+      mediaPerm: true,
+      groupPerm: true,
+    },
+  },
   settings: true,
 };

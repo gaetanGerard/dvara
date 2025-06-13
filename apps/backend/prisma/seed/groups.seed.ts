@@ -88,29 +88,68 @@ async function main() {
       canDelete: true,
     },
   });
+  // GroupPerm
+  const groupPermAll = await prisma.groupPerm.upsert({
+    where: { name: 'ALL' },
+    update: {},
+    create: {
+      name: 'ALL',
+      description: 'All group permissions',
+      canAdd: true,
+      canEdit: true,
+      canView: true,
+      canUse: true,
+      canDelete: true,
+    },
+  });
+  const groupPermBasic = await prisma.groupPerm.upsert({
+    where: { name: 'BASIC' },
+    update: {},
+    create: {
+      name: 'BASIC',
+      description: 'Basic group permissions',
+      canAdd: false,
+      canEdit: false,
+      canView: true,
+      canUse: false,
+      canDelete: false,
+    },
+  });
 
   // Create GroupPermissions for super admin (all rights)
   const superAdminPerm = await prisma.groupPermission.upsert({
     where: { name: 'SUPER_ADMIN_ALL' },
-    update: {},
+    update: {
+      dashPerm: { connect: { id: dashPermAll.id } },
+      appsPerm: { connect: { id: appsPermAll.id } },
+      mediaPerm: { connect: { id: mediaPermAll.id } },
+      groupPerm: { connect: { id: groupPermAll.id } },
+    },
     create: {
       name: 'SUPER_ADMIN_ALL',
       description: 'Full rights for super admin',
       dashPerm: { connect: { id: dashPermAll.id } },
       appsPerm: { connect: { id: appsPermAll.id } },
       mediaPerm: { connect: { id: mediaPermAll.id } },
+      groupPerm: { connect: { id: groupPermAll.id } },
     },
   });
   // Create GroupPermissions for everyone (basic rights)
   const everyonePerm = await prisma.groupPermission.upsert({
     where: { name: 'EVERYONE_BASIC' },
-    update: {},
+    update: {
+      dashPerm: { connect: { id: dashPermBasic.id } },
+      appsPerm: { connect: { id: appsPermBasic.id } },
+      mediaPerm: { connect: { id: mediaPermBasic.id } },
+      groupPerm: { connect: { id: groupPermBasic.id } },
+    },
     create: {
       name: 'EVERYONE_BASIC',
       description: 'Basic rights for everyone',
       dashPerm: { connect: { id: dashPermBasic.id } },
       appsPerm: { connect: { id: appsPermBasic.id } },
       mediaPerm: { connect: { id: mediaPermBasic.id } },
+      groupPerm: { connect: { id: groupPermBasic.id } },
     },
   });
 

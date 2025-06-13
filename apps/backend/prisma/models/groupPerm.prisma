@@ -1,0 +1,11 @@
+model GroupPerm {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String?
+  canAdd      Boolean @default(false)
+  canEdit     Boolean @default(false)
+  canView     Boolean @default(false)
+  canUse      Boolean @default(false)
+  canDelete   Boolean @default(false)
+  groupPermissions GroupPermission[]
+}

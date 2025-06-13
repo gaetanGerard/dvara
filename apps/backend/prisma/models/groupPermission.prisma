@@ -9,4 +9,6 @@ model GroupPermission {
   appsPerm        AppsPerm?      @relation(fields: [appsPermId], references: [id])
   mediaPermId     Int?
   mediaPerm       MediaPerm?      @relation(fields: [mediaPermId], references: [id])
+  groupPermId     Int?
+  groupPerm       GroupPerm?      @relation(fields: [groupPermId], references: [id])
 }
