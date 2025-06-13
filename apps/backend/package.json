@@ -25,6 +25,7 @@
     "test:media": "jest --config ./test/jest-e2e.json --runInBand ./test/media.e2e-spec.ts",
     "test:app": "jest --config ./test/jest-e2e.json --runInBand ./test/application.e2e-spec.ts",
     "test:group": "jest --config ./test/jest-e2e.json --runInBand ./test/group.e2e-spec.ts",
+    "test:dashboard": "jest --config ./test/jest-e2e.json --runInBand ./test/dashboard.e2e-spec.ts",
     "seed": "ts-node prisma/seed/index.seed.ts",
     "seed:test": "ts-node prisma/seed/index.test.seed.ts"
   },
