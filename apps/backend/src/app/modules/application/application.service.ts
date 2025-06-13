@@ -13,7 +13,11 @@
  *
  * Throws BadRequestException for invalid operations or missing data.
  */
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
@@ -87,7 +91,10 @@ export class ApplicationService {
   }
 
   async remove(id: number) {
-    const app = await this.getOrThrow(id);
+    const app = await this.prisma.application.findUnique({ where: { id } });
+    if (!app) {
+      throw new NotFoundException('Application not found');
+    }
     const iconMediaId = app.iconMediaId;
     await this.prisma.application.delete({ where: { id } });
     const usedElsewhere = await this.prisma.application.findFirst({

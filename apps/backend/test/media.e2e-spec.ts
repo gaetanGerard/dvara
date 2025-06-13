@@ -83,7 +83,7 @@ describe('Media E2E - Permissions and CRUD', () => {
   it('user1 CANNOT update a media', async () => {
     try {
       await ctx.http.patch(
-        '/media/1',
+        `/media/${createdMediaId}`,
         { name: 'Should Not Work' },
         { headers: { Authorization: `Bearer ${user1Token}` } },
       );
@@ -92,7 +92,6 @@ describe('Media E2E - Permissions and CRUD', () => {
       const status = Number(err?.response?.status);
       if (![400, 403, 404, 500].includes(status)) {
         // Print the full error object for diagnosis
-
         console.error('Unexpected error for user1 update media:', err);
       }
       expect([400, 403, 404, 500].includes(status)).toBe(true);
@@ -101,7 +100,7 @@ describe('Media E2E - Permissions and CRUD', () => {
 
   it('user1 CANNOT delete a media', async () => {
     try {
-      await ctx.http.delete('/media/1', {
+      await ctx.http.delete(`/media/${createdMediaId}`, {
         headers: { Authorization: `Bearer ${user1Token}` },
       });
       throw new Error('Request should have failed (forbidden)');

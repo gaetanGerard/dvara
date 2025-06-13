@@ -89,6 +89,15 @@ export class MediaService {
     if (!media) {
       throw new BadRequestException('Media not found');
     }
+    // Check if media is referenced by any application as iconMediaId
+    const appUsingMedia = await this.prisma.application.findFirst({
+      where: { iconMediaId: id },
+    });
+    if (appUsingMedia) {
+      throw new BadRequestException(
+        'Cannot delete media: it is still used as an application icon.',
+      );
+    }
     /**
      * Deletes the physical file if it is a local upload
      */
