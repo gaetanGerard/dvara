@@ -1,0 +1,32 @@
+<ng-container *ngIf="!isLoggedIn; else loggedIn">
+  <form (submit)="onSubmit($event)">
+    <ui-input
+      [type]="'email'"
+      [label]="'Email'"
+      [placeholder]="'Entrez votre email'"
+      [value]="email()"
+      (valueChange)="email.set($event)"
+    ></ui-input>
+    <ui-input
+      [type]="'password'"
+      [label]="'Mot de passe'"
+      [placeholder]="'Entrez votre mot de passe'"
+      [value]="password()"
+      (valueChange)="password.set($event)"
+    ></ui-input>
+    <ui-button [type]="'submit'">Se connecter</ui-button>
+    <div *ngIf="error()" style="color: red; margin-top: 1rem">
+      {{ error() }}
+    </div>
+  </form>
+</ng-container>
+<ng-template #loggedIn>
+  <div style="color: green; margin-top: 1rem">
+    Bonjour
+    {{ currentUser?.pseudo || currentUser?.username || currentUser?.email }}
+    !
+  </div>
+  <ui-button (click)="authService.logout()" style="margin-top: 1rem"
+    >Se déconnecter</ui-button
+  >
+</ng-template>

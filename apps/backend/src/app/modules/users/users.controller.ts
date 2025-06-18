@@ -100,11 +100,25 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  // Récupérer les infos de l'utilisateur courant (profil)
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getMe(@Req() req: Request & { user?: any }) {
+    const userId = Number(req.user?.sub);
+    if (!userId || isNaN(userId) || userId <= 0) {
+      throw new ForbiddenException('Utilisateur non authentifié');
+    }
+    return this.usersService.findOne(userId);
+  }
+
   // Get a user by id (SUPER_ADMIN or self)
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission({ resource: 'users', action: 'canView' })
   @Get(':id')
   async findOne(@Req() req: Request & { user?: any }, @Param('id') id: string) {
+    if (id === 'me') {
+      throw new BadRequestException('Invalid user id');
+    }
     const user = req.user;
     const userId = parseInt(id, 10);
     const superAdminGroupId = await this.getSuperAdminGroupId();
@@ -142,6 +156,9 @@ export class UsersController {
   async remove(@Req() req: Request & { user?: any }, @Param('id') id: string) {
     const user = req.user;
     const userId = parseInt(id, 10);
+    if (!userId || isNaN(userId) || userId <= 0) {
+      throw new BadRequestException('Invalid user id');
+    }
     const superAdminGroupId = await this.getSuperAdminGroupId();
     // Check if target is SUPER_ADMIN
     const targetUser = await this.usersService.findOne(userId);
@@ -227,6 +244,9 @@ export class UsersController {
     const userId = parseInt(id, 10);
     if (user?.sub !== userId) {
       throw new ForbiddenException('You can only update your own image.');
+    }
+    if (!userId || isNaN(userId) || userId <= 0) {
+      throw new BadRequestException('Invalid user id');
     }
     // Case 1: delete the media (dissociate and remove file/db if needed)
     if (body.mediaId === null && body.deleteMedia) {

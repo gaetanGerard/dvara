@@ -180,6 +180,9 @@ export class UsersService {
    * @param id - User id
    */
   async findOne(id: number) {
+    if (typeof id !== 'number' || isNaN(id) || id <= 0) {
+      throw new BadRequestException('Invalid user id');
+    }
     try {
       const user = await this.prisma.user.findUnique({
         where: { id },

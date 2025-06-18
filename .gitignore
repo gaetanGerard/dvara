@@ -1,3 +1,6 @@
 node_modules
 init.*
 project.*
+# Ignore Angular environment files
+apps/frontend/src/environments/
+next-steps.md

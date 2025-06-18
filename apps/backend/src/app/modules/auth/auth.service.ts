@@ -120,14 +120,35 @@ export class AuthService {
       ? user.adminGroups.map((g: { id: number }) => g.id)
       : [];
     // Generate new access token
+    const newAccessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, groupIds, adminGroupIds },
+      {
+        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
+        secret: process.env.JWT_SECRET,
+      },
+    );
+    // Generate new refresh token (sliding expiration)
+    const newRefreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, groupIds, adminGroupIds },
+      {
+        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
+        secret: process.env.JWT_SECRET,
+      },
+    );
+    // Hash and store new refresh token
+    const hashedRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
     return {
-      access_token: this.jwtService.sign(
-        { sub: user.id, email: user.email, groupIds, adminGroupIds },
-        {
-          expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
-          secret: process.env.JWT_SECRET,
-        },
-      ),
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      user: {
+        ...user,
+        password: undefined,
+        refreshToken: undefined,
+      },
     };
   }
 
